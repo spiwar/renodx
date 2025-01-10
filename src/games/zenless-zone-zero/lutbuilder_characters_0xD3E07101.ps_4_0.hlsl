@@ -1,3 +1,5 @@
+#include "./shared.h"
+
 //used on characters??
 // ---- Created with 3Dmigoto v1.4.1 on Thu Jan  2 20:23:27 2025
 Texture2D<float4> t9 : register(t9);
@@ -293,6 +295,15 @@ void main(
   r0.xyz = r1.xyz * r0.xxx;
 
   float3 untonemapped = r0.xyz;
+
+  renodx::lut::Config lut_config = renodx::lut::config::Create(
+      s2_s,
+      cb0[159].w * injectedData.colorGradeLUTStrength,
+      injectedData.colorGradeLUTScaling,
+      renodx::lut::config::type::SRGB,
+      renodx::lut::config::type::SRGB,
+      cb0[159].xyz  // precompute
+  );
   
   r1.xyz = cb0[178].xxx * r0.xyz;
   r2.xyzw = cmp(r1.xxyy < cb0[178].yzyz);
@@ -338,8 +349,10 @@ void main(
   r0.x = r0.w ? r0.x : 0;
   r3.z = r0.x * r1.w + r1.y;
 
-  /* Original LUT Sampling*/
+  r0.xyz = lerp(r0.xyz, renodx::lut::Sample(t1, lut_config, saturate(r0.xyz)), lut_config.strength);
 
+  /* Original LUT Sampling*/
+#if 0
   r0.x = cmp(0 < cb0[159].w);
   if (r0.x != 0) {
     r3.xyz = saturate(r3.xyz);
@@ -374,6 +387,7 @@ void main(
     r0.xyz = cmp(float3(0.0404499993, 0.0404499993, 0.0404499993) >= r0.xyz);
     r3.xyz = r0.xyz ? r1.xyz : r2.xyz;
   }
+#endif
 
   r0.x = r3.x + r3.y;
   r0.x = r0.x + r3.z;
