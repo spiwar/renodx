@@ -137,7 +137,7 @@ void main(
   r1.xy = r1.yy * r4.xy + r2.xy;
   r7.xyzw = t0.Sample(s0_s, r1.xy).xyzw;
 
-  float3 untonemapped = r7.rgb;
+  //float3 untonemapped = r7.rgb;
 
   r1.xy = v1.xy + r2.zw;
   r1.xy = r1.zz * r4.xy + r1.xy;
@@ -243,6 +243,7 @@ void main(
     r0.xyz = r0.xxx * r0.yzw + cb1[6].xyz;
     r1.xyz = r1.xyz * r0.xyz;
   }
+  float3 untonemapped = r1.xyz;
   
   /*
   // Sample as 2D - ARRI C3 1000 LUT (internal)

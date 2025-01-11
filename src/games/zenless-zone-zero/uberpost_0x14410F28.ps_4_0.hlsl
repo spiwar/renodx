@@ -138,7 +138,7 @@ void main(
   r1.xy = r1.yy * r4.xy + r2.xy;
   r7.xyzw = t0.Sample(s0_s, r1.xy).xyzw;
 
-  float3 untonemapped = r7.rgb;
+  //float3 untonemapped = r7.rgb;
 
   r1.xy = v1.xy + r2.zw;
   r1.xy = r1.zz * r4.xy + r1.xy;
@@ -170,7 +170,8 @@ void main(
   r2.xzw = r2.xzw * r0.zzz + cb1[23].zzz;
   r1.x = r7.x;
   r1.y = r2.y;
-  r1.xyz = r1.zxy * r2.wxz + r5.zxy;
+  // r1.xyz = r1.zxy * r2.wxz + r5.zxy;
+  r1.xyz = r1.xyz * r2.wxz + r5.zxy;
   r0.z = cmp(cb1[21].z < 0.5);
   r2.xy = cmp(float2(0, 0) < cb1[21].xy);
   r0.w = (int)r2.y | (int)r2.x;
@@ -244,7 +245,7 @@ void main(
     r0.xyz = r0.xxx * r0.yzw + cb1[6].xyz;
     r1.xyz = r1.xyz * r0.zxy;
   }
-  //float3 untonemapped = r1.xyz;
+  float3 untonemapped = r1.xyz;
 
   renodx::lut::Config lut_config = renodx::lut::config::Create(
       s0_s,
@@ -260,7 +261,7 @@ void main(
   config.type = injectedData.toneMapType;
   config.peak_nits = injectedData.toneMapPeakNits;
   config.game_nits = injectedData.toneMapGameNits;
-  config.gamma_correction = injectedData.toneMapGammaCorrection;
+  //config.gamma_correction = injectedData.toneMapGammaCorrection;
   config.exposure = injectedData.colorGradeExposure;
   config.highlights = injectedData.colorGradeHighlights;
   config.shadows = injectedData.colorGradeShadows;

@@ -44,12 +44,12 @@ void main(
     // start of ARRI C3 1000 LUT
     renodx::lut::Config lut_config = renodx::lut::config::Create(
         s0_s,
-        1.f,
+        0.5f,
         0.f,
         renodx::lut::config::type::ARRI_C1000_NO_CUT,
         renodx::lut::config::type::LINEAR);
 
-    r2.xyz = lerp(r2.xyz, renodx::lut::Sample(t0, lut_config, r2.xyz), 0.5);
+    r2.xyz = renodx::lut::Sample(t0, lut_config, r2.xyz);
     /*r2.xyz = r2.xyz * float3(5.55555582,5.55555582,5.55555582) + float3(0.0479959995,0.0479959995,0.0479959995);
     r2.xyz = log2(r2.xyz);
     r2.xyz = saturate(r2.xyz * float3(0.0734997839,0.0734997839,0.0734997839) + float3(0.386036009,0.386036009,0.386036009));
