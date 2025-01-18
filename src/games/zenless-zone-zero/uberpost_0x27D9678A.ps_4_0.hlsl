@@ -151,7 +151,8 @@ void main(
     r0.xzw = cb1[13].xxx * r0.xzw;
     r3.xyz = r0.xzw * r0.yyy + r3.xyz;
   }
-  o0.xyz = saturate(r3.xyz);
+  // o0.xyz = saturate(r3.xyz);
+  o0.xyz = r3.xyz;
   o0.rgb *= injectedData.toneMapGameNits / injectedData.toneMapUINits;
   return;
 }

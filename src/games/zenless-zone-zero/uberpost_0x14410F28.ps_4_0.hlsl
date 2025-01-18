@@ -138,7 +138,7 @@ void main(
   r1.xy = r1.yy * r4.xy + r2.xy;
   r7.xyzw = t0.Sample(s0_s, r1.xy).xyzw;
 
-  float3 untonemapped = r7.rgb;
+  //float3 untonemapped = r7.rgb;
 
   r1.xy = v1.xy + r2.zw;
   r1.xy = r1.zz * r4.xy + r1.xy;
@@ -244,15 +244,7 @@ void main(
     r0.xyz = r0.xxx * r0.yzw + cb1[6].xyz;
     r1.xyz = r1.xyz * r0.zxy;
   }
-  //float3 untonemapped = r1.xyz;
-
-  renodx::lut::Config lut_config = renodx::lut::config::Create(
-      s0_s,
-      injectedData.colorGradeLUTStrength,
-      injectedData.colorGradeLUTScaling,
-      renodx::lut::config::type::SRGB,
-      renodx::lut::config::type::SRGB
-    );
+  float3 untonemapped = r1.xyz;
 
   float vanillaMidGray = renodx::tonemap::unity::BT709(0.18f).x;
 
@@ -277,11 +269,9 @@ void main(
       saturate(renodx::tonemap::unity::BT709(untonemapped)),
       injectedData.toneMapHueCorrection);
 
-  r0.xyz = renodx::tonemap::config::Apply(untonemapped, config, lut_config, t2);
-
-  // r1.xyz = saturate(r1.xyz);
-
-  /*
+  float3 output = renodx::tonemap::config::Apply(untonemapped, config);
+  
+  r1.xyz = saturate(r1.xyz);
   r0.xyz = float3(12.9200001,12.9200001,12.9200001) * r1.xyz;
   r2.xyz = log2(r1.xyz);
   r2.xyz = float3(0.416666657,0.416666657,0.416666657) * r2.xyz;
@@ -309,7 +299,9 @@ void main(
   r2.xyz = exp2(r2.xyz);
   r0.xyz = cmp(float3(0.0404499993,0.0404499993,0.0404499993) >= r0.xyz);
   r0.xyz = r0.xyz ? r1.xyz : r2.xyz;
-  */
+
+  output = renodx::tonemap::UpgradeToneMap(output, saturate(output), r0.xyz, 1.f);
+  r0.xyz = output;
 
   r0.w = cmp(0 < cb1[13].x);
   if (r0.w != 0) {
