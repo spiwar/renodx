@@ -298,7 +298,7 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
           .old_format = reshade::api::format::r8g8b8a8_typeless,
           .new_format = reshade::api::format::r16g16b16a16_typeless,
           .index = 0,
-          .aspect_ratio = renodx::mods::swapchain::SwapChainUpgradeTarget::ANY
+          .ignore_size = true
       });
       break;
     case DLL_PROCESS_DETACH:
