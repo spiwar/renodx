@@ -57,7 +57,7 @@ struct SwapChainUpgradeTarget {
   bool ignore_reset = false;
 
 #define SwapChainViewUpgrade(usage, source, destination) \
-  { {reshade::api::resource_usage::usage, reshade::api::format::source}, reshade::api::format::destination }
+  {{reshade::api::resource_usage::usage, reshade::api::format::source}, reshade::api::format::destination}
 #define SwapChainViewUpgradeAll(source, destination)               \
   SwapChainViewUpgrade(shader_resource, source, destination),      \
       SwapChainViewUpgrade(unordered_access, source, destination), \
@@ -71,6 +71,8 @@ struct SwapChainUpgradeTarget {
           SwapChainViewUpgradeAll(r10g10b10a2_typeless, r16g16b16a16_typeless),
           SwapChainViewUpgradeAll(r8g8b8a8_typeless, r16g16b16a16_typeless),
           SwapChainViewUpgradeAll(r16g16b16a16_float, r16g16b16a16_float),
+          SwapChainViewUpgradeAll(r16g16b16a16_unorm, r16g16b16a16_float),
+          SwapChainViewUpgradeAll(r16g16b16a16_snorm, r16g16b16a16_float),
           SwapChainViewUpgradeAll(r10g10b10a2_unorm, r16g16b16a16_float),
           SwapChainViewUpgradeAll(b10g10r10a2_unorm, r16g16b16a16_float),
           SwapChainViewUpgradeAll(r8g8b8a8_unorm, r16g16b16a16_float),
@@ -405,7 +407,7 @@ static bool FlushResourceViewInDescriptorTable(
 static bool ActivateCloneHotSwap(
     reshade::api::device* device,
     reshade::api::resource_view resource_view) {
-  auto resource = device->get_resource_from_view(resource_view);
+  auto resource = renodx::utils::resource::GetResourceFromView(device, resource_view);
   if (resource.handle == 0u) {
     std::stringstream s;
     s << "mods::swapchain::ActivateCloneHotSwap(no handle for rsv ";
@@ -415,12 +417,17 @@ static bool ActivateCloneHotSwap(
     return false;
   }
   auto& data = device->get_private_data<DeviceData>();
+  if (std::addressof(data) == nullptr) return false;
   const std::unique_lock lock(data.mutex);
 
   reshade::api::resource clone_resource;
 
-  auto cloned_resource_pair = data.resource_clones.find(resource.handle);
-  if (cloned_resource_pair == data.resource_clones.end()) {
+  if (data.resource_clone_enabled.contains(resource.handle)) {
+    // Already activated
+    return false;
+  }
+
+  if (!data.resource_clone_targets.contains(resource.handle)) {
 #ifdef DEBUG_LEVEL_1
     std::stringstream s;
     s << "mods::swapchain::ActivateCloneHotSwap(";
@@ -433,13 +440,6 @@ static bool ActivateCloneHotSwap(
     reshade::log::message(reshade::log::level::warning, s.str().c_str());
 #endif
     // Resource is not a cloned resource (fail)
-    return false;
-  }
-
-  clone_resource = reshade::api::resource{cloned_resource_pair->second};
-
-  if (data.resource_clone_enabled.contains(resource.handle)) {
-    // Already activated
     return false;
   }
 
@@ -751,15 +751,6 @@ static void ReleaseResourceView(
     data.resource_view_clones.erase(pair);
   }
   data.resource_view_clone_targets.erase(view.handle);
-  data.swap_chain_rtvs.erase(view.handle);
-  
-  // Iterate to see if was a swap_chain_proxy_rtvs
-  for (auto pair : data.swap_chain_proxy_rtvs) {
-    if (pair.second.handle == view.handle) {
-      data.swap_chain_proxy_rtvs.erase(pair.first);
-      break;
-    }
-  }
 }
 
 static void RewriteRenderTargets(
@@ -1388,7 +1379,7 @@ static void OnInitResource(
       reshade::log::message(reshade::log::level::warning, "mods::swapchain::OnInitResource(Unknown resource type)");
     default:
       if (private_data.applied_target != nullptr) {
-        reshade::log::message(reshade::log::level::warning, "mods::swapchain::OnInitResource(Modified??)");
+        reshade::log::message(reshade::log::level::warning, "mods::swapchain::OnInitResource(Modified?)");
         private_data.applied_target = nullptr;
       }
       return;
@@ -1820,12 +1811,6 @@ static void OnInitResourceView(
         target_pair != private_data.resource_clone_targets.end()) {
       private_data.resource_view_clone_targets[view.handle] = target_pair->second;
       private_data.resource_view_usage[view.handle] = usage_type;
-    }
-  }
-
-  if (utils::swapchain::IsBackBuffer(device, resource)) {
-    if ((usage_type & reshade::api::resource_usage::render_target) != 0u) {
-      private_data.swap_chain_rtvs[resource.handle] = view;
     }
   }
 
@@ -2556,7 +2541,12 @@ static bool OnSetFullscreenState(reshade::api::swapchain* swapchain, bool fullsc
   }
 
   if (!fullscreen) return false;
+
+  // Ensure resize buffer is called
+  // renodx::utils::swapchain::FastResizeBuffer(swapchain);
+
   if (private_data.prevent_full_screen) {
+    // Resize to fullscreen instead
     HWND output_window = static_cast<HWND>(swapchain->get_hwnd());
     if (output_window != nullptr) {
       auto device_back_buffer_desc = renodx::utils::swapchain::GetBackBufferDesc(device);
