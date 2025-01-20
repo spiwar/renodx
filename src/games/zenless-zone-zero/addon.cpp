@@ -31,7 +31,8 @@ renodx::mods::shader::CustomShaders custom_shaders = {
     CustomShaderEntry(0x1B51EA2B),
     CustomShaderEntry(0xD703D3ED),
     CustomShaderEntry(0x1A2991A9),
-    CustomShaderEntry(0x271F2807)
+    CustomShaderEntry(0x271F2807),
+    CustomShaderEntry(0xF7EBAAB1)
 };
 
 ShaderInjectData shader_injection;
@@ -296,7 +297,7 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
       //  RGBA8_typeless
       renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({
           .old_format = reshade::api::format::r8g8b8a8_typeless,
-          .new_format = reshade::api::format::r16g16b16a16_typeless,
+          .new_format = reshade::api::format::r16g16b16a16_float,
           .index = 0,
           .ignore_size = true
       });
