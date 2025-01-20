@@ -393,7 +393,7 @@ void main(
   r0.x = r0.x + r3.z;
   r0.y = 0.333333343 * r0.x;
   r0.xzw = -r0.xxx * float3(0.333333343, 0.333333343, 0.333333343) + r3.xyz;
-  o0.xyz = saturate(r0.xzw * cb0[184].zzz + r0.yyy);
+  o0.xyz = r0.xzw * cb0[184].zzz + r0.yyy;
   o0.w = 1;
   return;
 }
