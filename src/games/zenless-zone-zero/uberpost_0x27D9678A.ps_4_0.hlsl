@@ -1,5 +1,5 @@
 #include "./shared.h"
-
+// used for character portraits
 // ---- Created with 3Dmigoto v1.4.1 on Thu Jan  9 02:10:34 2025
 Texture2D<float4> t4 : register(t4);
 
@@ -138,6 +138,34 @@ void main(
     r0.xyz = r0.xxx * r0.yzw + cb1[6].xyz;
     r3.xyz = r3.xyz * r0.xyz;
   }
+
+  float3 untonemapped = r3.xyz;
+
+  float vanillaMidGray = renodx::tonemap::unity::BT709(0.18f).x;
+
+  renodx::tonemap::Config config = renodx::tonemap::config::Create();
+  config.type = injectedData.toneMapType;
+  config.peak_nits = injectedData.toneMapPeakNits;
+  config.game_nits = injectedData.toneMapGameNits;
+  config.gamma_correction = injectedData.toneMapGammaCorrection;
+  config.exposure = injectedData.colorGradeExposure;
+  config.highlights = injectedData.colorGradeHighlights;
+  config.shadows = injectedData.colorGradeShadows;
+  config.contrast = injectedData.colorGradeContrast;
+  config.saturation = injectedData.colorGradeSaturation;
+  config.mid_gray_value = vanillaMidGray;
+  config.mid_gray_nits = vanillaMidGray * 100.f;
+  config.reno_drt_dechroma = injectedData.colorGradeBlowout;
+  config.reno_drt_flare = injectedData.colorGradeFlare;
+
+  config.hue_correction_type = renodx::tonemap::config::hue_correction_type::CUSTOM;
+  config.hue_correction_color = lerp(
+      untonemapped,
+      saturate(renodx::tonemap::unity::BT709(untonemapped)),
+      injectedData.toneMapHueCorrection);
+
+  r3.xyz = renodx::tonemap::config::Apply(untonemapped, config);
+
   r0.x = cmp(0 < cb1[13].x);
   if (r0.x != 0) {
     r0.xy = v1.xy * cb1[8].xy + cb1[8].zw;

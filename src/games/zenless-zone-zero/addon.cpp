@@ -22,7 +22,7 @@
 namespace {
 
 renodx::mods::shader::CustomShaders custom_shaders = {
-    CustomShaderEntry(0xD3E07101), //Secondary lutbuilder, seems to be used on characters.
+    CustomShaderEntry(0xD3E07101),  // Secondary lutbuilder, seems to be used on characters.
     CustomShaderEntry(0x59D640A3),
     CustomShaderEntry(0x9E93A9D5),
     CustomShaderEntry(0x1D087B15),
@@ -33,8 +33,7 @@ renodx::mods::shader::CustomShaders custom_shaders = {
     CustomShaderEntry(0x1A2991A9),
     CustomShaderEntry(0x271F2807),
     CustomShaderEntry(0xF7EBAAB1),
-    CustomShaderEntry(0x583025D2)
-};
+    CustomShaderEntry(0x583025D2)};
 
 ShaderInjectData shader_injection;
 const std::string build_date = __DATE__;
@@ -266,6 +265,63 @@ void OnPresetOff() {
   renodx::utils::settings::UpdateSetting("colorGradeLUTScaling", 0.f);
   renodx::utils::settings::UpdateSetting("processingInternalSampling", 0.f);
 }
+
+bool HandlePreDraw(reshade::api::command_list* cmd_list, bool is_dispatch = false) {
+  const auto& shader_state = cmd_list->get_private_data<renodx::utils::shader::CommandListData>();
+
+  auto pixel_shader_hash = shader_state.GetCurrentPixelShaderHash();
+  // 0x271F2807 and 0x1D087B15 are used to unclamp the main menu.
+  // 0x59D640A3 is the first Uberpost used and it's here to unclamp the main game at 0.8 render scale
+  // 0x27D9678A is used to unclamp the character portraits
+
+  if (
+      !is_dispatch
+      && (pixel_shader_hash == 0x59D640A3 || pixel_shader_hash == 0x1D087B15 || pixel_shader_hash == 0x271F2807
+          || pixel_shader_hash == 0x27D9678A)) {
+    auto rtvs = renodx::utils::swapchain::GetRenderTargets(cmd_list);
+
+    bool changed = false;
+    for (auto rtv : rtvs) {
+      if (renodx::mods::swapchain::ActivateCloneHotSwap(cmd_list->get_device(), rtv)) {
+        std::stringstream s;
+        s << "Upgrading RTV: ";
+        s << reinterpret_cast<void*>(rtv.handle);
+        s << ", shader: ";
+        s << PRINT_CRC32(pixel_shader_hash);
+        s << ")";
+        reshade::log::message(reshade::log::level::debug, s.str().c_str());
+
+        changed = true;
+      }
+    }
+    if (changed) {
+      renodx::mods::swapchain::FlushDescriptors(cmd_list);
+    }
+  }
+
+  return false;
+}
+
+bool OnDraw(reshade::api::command_list* cmd_list, uint32_t vertex_count,
+            uint32_t instance_count, uint32_t first_vertex, uint32_t first_instance) {
+  return HandlePreDraw(cmd_list);
+}
+
+bool OnDrawIndexed(reshade::api::command_list* cmd_list, uint32_t index_count,
+                   uint32_t instance_count, uint32_t first_index, int32_t vertex_offset, uint32_t first_instance) {
+  return HandlePreDraw(cmd_list);
+}
+
+bool OnDrawOrDispatchIndirect(reshade::api::command_list* cmd_list, reshade::api::indirect_command type,
+                              reshade::api::resource buffer, uint64_t offset, uint32_t draw_count, uint32_t stride) {
+  return HandlePreDraw(cmd_list);
+}
+
+bool OnDispatch(reshade::api::command_list* cmd_list,
+                uint32_t group_count_x, uint32_t group_count_y, uint32_t group_count_z) {
+  return HandlePreDraw(cmd_list, true);
+}
+
 }  // namespace
 
 extern "C" __declspec(dllexport) constexpr const char* NAME = "RenoDX";
@@ -296,12 +352,22 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
                                                                      }});
 
       //  RGBA8_typeless
-      renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({
-          .old_format = reshade::api::format::r8g8b8a8_typeless,
-          .new_format = reshade::api::format::r16g16b16a16_float,
-          .index = 0,
-          .ignore_size = true
-      });
+      renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({.old_format = reshade::api::format::r8g8b8a8_typeless,
+                                                                     .new_format = reshade::api::format::r16g16b16a16_float,
+                                                                     .index = 0,
+                                                                     .ignore_size = true});
+
+      renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({.old_format = reshade::api::format::r8g8b8a8_typeless,
+                                                                     .new_format = reshade::api::format::r16g16b16a16_float,
+                                                                     .ignore_size = true,
+                                                                     .use_resource_view_cloning = true,
+                                                                     .use_resource_view_hot_swap = true});
+
+      reshade::register_event<reshade::addon_event::draw>(OnDraw);
+      reshade::register_event<reshade::addon_event::draw_indexed>(OnDrawIndexed);
+      reshade::register_event<reshade::addon_event::draw_or_dispatch_indirect>(OnDrawOrDispatchIndirect);
+      reshade::register_event<reshade::addon_event::dispatch>(OnDispatch);
+
       break;
     case DLL_PROCESS_DETACH:
       reshade::unregister_addon(h_module);
