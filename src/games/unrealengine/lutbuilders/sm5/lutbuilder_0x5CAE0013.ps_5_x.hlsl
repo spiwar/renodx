@@ -62,6 +62,9 @@ void main(
   r4.y = dot(cb1[9].xyz, r1.xyz);
   r4.z = dot(cb1[10].xyz, r1.xyz);
   r0.w = dot(r4.xyz, float3(0.272228718, 0.674081743, 0.0536895171));
+
+  SetUngradedAP1(r4.xyz);
+
   r1.xyz = r4.xyz / r0.www;
   r1.xyz = float3(-1, -1, -1) + r1.xyz;
   r1.x = dot(r1.xyz, r1.xyz);
@@ -165,7 +168,7 @@ void main(
   r1.xyz = r4.xyz * r1.www + r1.xyz;
   r1.xyz = r5.xyz * r4.www + r1.xyz;
 
-  float3 untonemapped_ap1 = r1.xyz;
+  SetUntonemappedAP1(r1.xyz);
 
   // Lerp Blue Correct
   r4.x = dot(float3(0.938639402, 1.02359565e-10, 0.0613606237), r1.xyz);
@@ -340,6 +343,9 @@ void main(
   r5.x = dot(cb1[12].xyz, r4.xyz);
   r5.y = dot(cb1[13].xyz, r4.xyz);
   r5.z = dot(cb1[14].xyz, r4.xyz);
+
+  SetTonemappedBT709(r5.xyz);
+
   r4.xyz = max(float3(0, 0, 0), r5.xyz);
   r5.xyz = r4.xyz * r4.xyz;
   r4.xyz = cb0[39].yyy * r4.xyz;
@@ -353,19 +359,20 @@ void main(
   r5.xyz = cb0[40].yyy * r5.xyz;
   r5.xyz = exp2(r5.xyz);
 
-  if (injectedData.toneMapType != 0) {
-    o0 = LutBuilderToneMap(untonemapped_ap1, r5.xyz);
+  if (RENODX_TONE_MAP_TYPE != 0) {
+    o0 = GenerateOutput(r5.xyz, asuint(cb0[40].w));
     return;
   }
 
-  if (cb0[40].w == 0) {
+  [branch]
+  if (asuint(cb0[40].w) == 0) {
     r6.x = dot(cb1[8].xyz, r5.xyz);
     r6.y = dot(cb1[9].xyz, r5.xyz);
     r6.z = dot(cb1[10].xyz, r5.xyz);
     r7.x = dot(r2.xyz, r6.xyz);
     r7.y = dot(r3.xyz, r6.xyz);
     r7.z = dot(r0.xyz, r6.xyz);
-    r6.xyz = cb1[20].xxx ? r5.xyz : r7.xyz;
+    r6.xyz = (asuint(cb1[20].x) != 0u) ? r5.xyz : r7.xyz;
     r7.xyz = float3(12.9200001, 12.9200001, 12.9200001) * r6.xyz;
     r8.xyz = cmp(r6.xyz >= float3(0.00313066994, 0.00313066994, 0.00313066994));
     r6.xyz = log2(r6.xyz);
@@ -1418,5 +1425,8 @@ void main(
   }
   o0.xyz = float3(0.952381015, 0.952381015, 0.952381015) * r6.xyz;
   o0.w = 0;
+
+  o0 = saturate(o0);
+
   return;
 }

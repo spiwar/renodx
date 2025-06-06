@@ -6,8 +6,8 @@
 #define ImTextureID ImU64
 
 #define DEBUG_LEVEL_0
-#define NOMINMAX
 
+#define NOMINMAX
 #include <chrono>
 #include <random>
 
@@ -17,15 +17,22 @@
 
 #include "../../mods/shader.hpp"
 #include "../../mods/swapchain.hpp"
+#include "../../utils/date.hpp"
+#include "../../utils/path.hpp"
+#include "../../utils/platform.hpp"
 #include "../../utils/settings.hpp"
+#include "../../utils/shader.hpp"
+#include "../../utils/swapchain.hpp"
 #include "./shared.h"
 
 namespace {
 
 renodx::mods::shader::CustomShaders custom_shaders = {
-    CustomShaderEntry(0x922A71D1),
-    CustomShaderEntry(0x4D6F937E),
-    CustomShaderEntry(0xD950DA01),
+    CustomDirectXShaders(0x922A71D1),
+    CustomDirectXShaders(0x4D6F937E),
+    CustomDirectXShaders(0xD950DA01),
+    CustomDirectXShaders(0xE87D13A1),
+    {0xF68D39B5, {}}  // SDR
 };
 
 ShaderInjectData shader_injection;
@@ -33,7 +40,7 @@ ShaderInjectData shader_injection;
 renodx::utils::settings::Settings settings = {
     new renodx::utils::settings::Setting{
         .key = "ToneMapType",
-        .binding = &shader_injection.tone_map_type,
+        .binding = &RENODX_TONE_MAP_TYPE,
         .value_type = renodx::utils::settings::SettingValueType::INTEGER,
         .default_value = 3.f,
         .can_reset = false,
@@ -44,7 +51,7 @@ renodx::utils::settings::Settings settings = {
     },
     new renodx::utils::settings::Setting{
         .key = "ToneMapPeakNits",
-        .binding = &shader_injection.tone_map_peak_nits,
+        .binding = &RENODX_PEAK_WHITE_NITS,
         .default_value = 1000.f,
         .can_reset = false,
         .label = "Peak Brightness",
@@ -55,7 +62,7 @@ renodx::utils::settings::Settings settings = {
     },
     new renodx::utils::settings::Setting{
         .key = "ToneMapGameNits",
-        .binding = &shader_injection.tone_map_game_nits,
+        .binding = &RENODX_DIFFUSE_WHITE_NITS,
         .default_value = 203.f,
         .label = "Game Brightness",
         .section = "Tone Mapping",
@@ -65,7 +72,7 @@ renodx::utils::settings::Settings settings = {
     },
     new renodx::utils::settings::Setting{
         .key = "ToneMapUINits",
-        .binding = &shader_injection.tone_map_ui_nits,
+        .binding = &RENODX_GRAPHICS_WHITE_NITS,
         .default_value = 203.f,
         .label = "UI Brightness",
         .section = "Tone Mapping",
@@ -75,7 +82,7 @@ renodx::utils::settings::Settings settings = {
     },
     new renodx::utils::settings::Setting{
         .key = "ToneMapGammaCorrection",
-        .binding = &shader_injection.tone_map_gamma_correction,
+        .binding = &RENODX_GAMMA_CORRECTION,
         .value_type = renodx::utils::settings::SettingValueType::INTEGER,
         .default_value = 0.f,
         .label = "Gamma Correction",
@@ -85,7 +92,7 @@ renodx::utils::settings::Settings settings = {
     },
     new renodx::utils::settings::Setting{
         .key = "ToneMapHueProcessor",
-        .binding = &shader_injection.tone_map_hue_processor,
+        .binding = &RENODX_TONE_MAP_HUE_PROCESSOR,
         .value_type = renodx::utils::settings::SettingValueType::INTEGER,
         .default_value = 0.f,
         .label = "Hue Processor",
@@ -97,7 +104,7 @@ renodx::utils::settings::Settings settings = {
     },
     new renodx::utils::settings::Setting{
         .key = "ToneMapHueCorrectionMethod",
-        .binding = &shader_injection.tone_map_hue_correction_method,
+        .binding = &CUSTOM_HUE_CORRECTION_METHOD,
         .value_type = renodx::utils::settings::SettingValueType::INTEGER,
         .default_value = 0.f,
         .label = "Hue Correction Method",
@@ -109,7 +116,7 @@ renodx::utils::settings::Settings settings = {
     },
     new renodx::utils::settings::Setting{
         .key = "ToneMapHueCorrection",
-        .binding = &shader_injection.tone_map_hue_correction,
+        .binding = &RENODX_TONE_MAP_HUE_CORRECTION,
         .default_value = 100.f,
         .label = "Hue Correction",
         .section = "Tone Mapping",
@@ -122,7 +129,7 @@ renodx::utils::settings::Settings settings = {
     },
     new renodx::utils::settings::Setting{
         .key = "ToneMapPerChannel",
-        .binding = &shader_injection.tone_map_per_channel,
+        .binding = &RENODX_TONE_MAP_PER_CHANNEL,
         .value_type = renodx::utils::settings::SettingValueType::INTEGER,
         .default_value = 0.f,
         .label = "Per Channel",
@@ -133,7 +140,7 @@ renodx::utils::settings::Settings settings = {
     },
     new renodx::utils::settings::Setting{
         .key = "ColorGradeExposure",
-        .binding = &shader_injection.color_grade_exposure,
+        .binding = &RENODX_TONE_MAP_EXPOSURE,
         .default_value = 1.f,
         .label = "Exposure",
         .section = "Color Grading",
@@ -142,7 +149,7 @@ renodx::utils::settings::Settings settings = {
     },
     new renodx::utils::settings::Setting{
         .key = "ColorGradeHighlights",
-        .binding = &shader_injection.color_grade_highlights,
+        .binding = &RENODX_TONE_MAP_HIGHLIGHTS,
         .default_value = 50.f,
         .label = "Highlights",
         .section = "Color Grading",
@@ -151,7 +158,7 @@ renodx::utils::settings::Settings settings = {
     },
     new renodx::utils::settings::Setting{
         .key = "ColorGradeShadows",
-        .binding = &shader_injection.color_grade_shadows,
+        .binding = &RENODX_TONE_MAP_SHADOWS,
         .default_value = 50.f,
         .label = "Shadows",
         .section = "Color Grading",
@@ -160,7 +167,7 @@ renodx::utils::settings::Settings settings = {
     },
     new renodx::utils::settings::Setting{
         .key = "ColorGradeContrast",
-        .binding = &shader_injection.color_grade_contrast,
+        .binding = &RENODX_TONE_MAP_CONTRAST,
         .default_value = 50.f,
         .label = "Contrast",
         .section = "Color Grading",
@@ -169,7 +176,7 @@ renodx::utils::settings::Settings settings = {
     },
     new renodx::utils::settings::Setting{
         .key = "ColorGradeSaturation",
-        .binding = &shader_injection.color_grade_saturation,
+        .binding = &RENODX_TONE_MAP_SATURATION,
         .default_value = 50.f,
         .label = "Saturation",
         .section = "Color Grading",
@@ -177,30 +184,40 @@ renodx::utils::settings::Settings settings = {
         .parse = [](float value) { return value * 0.02f; },
     },
     new renodx::utils::settings::Setting{
-        .key = "ColorGradeBlowout",
-        .binding = &shader_injection.color_grade_blowout,
+        .key = "ColorGradeHighlightSaturation",
+        .binding = &RENODX_TONE_MAP_HIGHLIGHT_SATURATION,
         .default_value = 50.f,
+        .label = "Highlight Saturation",
+        .section = "Color Grading",
+        .tooltip = "Adds or removes highlight color.",
+        .max = 100.f,
+        .is_enabled = []() { return RENODX_TONE_MAP_TYPE >= 1; },
+        .parse = [](float value) { return value * 0.02f; },
+    },
+    new renodx::utils::settings::Setting{
+        .key = "ColorGradeBlowout",
+        .binding = &RENODX_TONE_MAP_BLOWOUT,
+        .default_value = 0.f,
         .label = "Blowout",
         .section = "Color Grading",
         .tooltip = "Controls highlight desaturation due to overexposure.",
         .max = 100.f,
-        .is_enabled = []() { return shader_injection.tone_map_type == 3; },
-        .parse = [](float value) { return value * 0.02f - 1.f; },
+        .parse = [](float value) { return value * 0.01f; },
     },
     new renodx::utils::settings::Setting{
         .key = "ColorGradeFlare",
-        .binding = &shader_injection.color_grade_flare,
-        .default_value = 50.f,
+        .binding = &RENODX_TONE_MAP_FLARE,
+        .default_value = 0.f,
         .label = "Flare",
         .section = "Color Grading",
-        .tooltip = "Flare/Glare",
+        .tooltip = "Flare/Glare Compensation",
         .max = 100.f,
-        .is_enabled = []() { return shader_injection.tone_map_type == 3; },
+        .is_enabled = []() { return RENODX_TONE_MAP_TYPE == 3; },
         .parse = [](float value) { return value * 0.02f; },
     },
     new renodx::utils::settings::Setting{
         .key = "ColorGradeColorSpace",
-        .binding = &shader_injection.color_grade_color_space,
+        .binding = &RENODX_SWAP_CHAIN_CUSTOM_COLOR_SPACE,
         .value_type = renodx::utils::settings::SettingValueType::INTEGER,
         .default_value = 0.f,
         .label = "Color Space",
@@ -215,7 +232,7 @@ renodx::utils::settings::Settings settings = {
     },
     new renodx::utils::settings::Setting{
         .key = "ColorGradeLUTStrength",
-        .binding = &shader_injection.color_grade_lut_strength,
+        .binding = &CUSTOM_LUT_STRENGTH,
         .default_value = 100.f,
         .label = "LUT Strength",
         .section = "Color Grading",
@@ -223,8 +240,29 @@ renodx::utils::settings::Settings settings = {
         .parse = [](float value) { return value * 0.01f; },
     },
     new renodx::utils::settings::Setting{
+        .key = "colorGradeLUTSampling",
+        .binding = &CUSTOM_LUT_TETRAHEDRAL,
+        .value_type = renodx::utils::settings::SettingValueType::INTEGER,
+        .default_value = 1.f,
+        .label = "LUT Sampling",
+        .section = "Color Grading",
+        .labels = {"Trilinear", "Tetrahedral"},
+    },
+    new renodx::utils::settings::Setting{
+        .key = "colorGradeLUTExtraction",
+        .binding = &CUSTOM_LUT_EXTRACTION,
+        .value_type = renodx::utils::settings::SettingValueType::INTEGER,
+        .default_value = 0.f,
+        .label = "LUT Extraction",
+        .section = "Color Grading",
+        .tooltip = "Selects method for applying original LUT."
+                   "\nScale uses the original tonemapping."
+                   "\nReconstruct extracts ACES from the LUT.",
+        .labels = {"Scale", "Reconstruct"},
+    },
+    new renodx::utils::settings::Setting{
         .key = "FXBloom",
-        .binding = &shader_injection.fx_bloom,
+        .binding = &CUSTOM_BLOOM,
         .default_value = 50.f,
         .label = "Bloom",
         .section = "Effects",
@@ -233,7 +271,7 @@ renodx::utils::settings::Settings settings = {
     },
     new renodx::utils::settings::Setting{
         .key = "FXVignette",
-        .binding = &shader_injection.fx_vignette,
+        .binding = &CUSTOM_VIGNETTE,
         .default_value = 50.f,
         .label = "Vignette",
         .section = "Effects",
@@ -242,7 +280,7 @@ renodx::utils::settings::Settings settings = {
     },
     new renodx::utils::settings::Setting{
         .key = "FXFilmGrain",
-        .binding = &shader_injection.fx_film_grain,
+        .binding = &CUSTOM_FILM_GRAIN_STRENGTH,
         .default_value = 50.f,
         .label = "Film Grain",
         .section = "Effects",
@@ -251,12 +289,22 @@ renodx::utils::settings::Settings settings = {
     },
     new renodx::utils::settings::Setting{
         .key = "FXHDRVideos",
-        .binding = &shader_injection.fx_hdr_videos,
+        .binding = &CUSTOM_HDR_VIDEOS,
         .value_type = renodx::utils::settings::SettingValueType::INTEGER,
-        .default_value = 0.f,
+        .default_value = 2.f,
         .label = "HDR Videos",
         .section = "Effects",
         .tooltip = "Uses modified BT.2446a to inverse tonemap SDR videos",
+        .labels = {"Off", "BT.2446a", "RenoDRT"},
+    },
+    new renodx::utils::settings::Setting{
+        .key = "ProcessingForceHDR",
+        .binding = &CUSTOM_HDR_VIDEOS,
+        .value_type = renodx::utils::settings::SettingValueType::INTEGER,
+        .default_value = 0.f,
+        .label = "Force HDR",
+        .section = "Processing",
+        .tooltip = "Required for DX11 support (requires game restart). ",
         .labels = {"Off", "On"},
     },
     new renodx::utils::settings::Setting{
@@ -266,7 +314,7 @@ renodx::utils::settings::Settings settings = {
         .group = "button-line-1",
         .tint = 0x5865F2,
         .on_change = []() {
-          ShellExecute(0, "open", "https://discord.gg/5WZXDpmbpP", 0, 0, SW_SHOW);
+          renodx::utils::platform::LaunchURL("https://discord.gg/5WZXDpmbpP");
         },
     },
     new renodx::utils::settings::Setting{
@@ -275,7 +323,7 @@ renodx::utils::settings::Settings settings = {
         .section = "Links",
         .group = "button-line-1",
         .on_change = []() {
-          ShellExecute(0, "open", "https://github.com/clshortfuse/renodx", 0, 0, SW_SHOW);
+          renodx::utils::platform::LaunchURL("https://github.com/clshortfuse/renodx");
         },
     },
 };
@@ -298,7 +346,8 @@ void OnPresetOff() {
   renodx::utils::settings::UpdateSetting("ColorGradeBlowout", 50.f);
   renodx::utils::settings::UpdateSetting("ColorGradeFlare", 50.f);
   renodx::utils::settings::UpdateSetting("ColorGradeColorSpace", 0.f);
-  renodx::utils::settings::UpdateSetting("ColorGradeLutStrength", 100.f);
+  renodx::utils::settings::UpdateSetting("ColorGradeLUTStrength", 100.f);
+  renodx::utils::settings::UpdateSetting("ColorGradeLUTSampling", 0.f);
   renodx::utils::settings::UpdateSetting("FXBloom", 50.f);
   renodx::utils::settings::UpdateSetting("FXVignette", 50.f);
   renodx::utils::settings::UpdateSetting("FXFilmGrain", 0.f);
@@ -307,7 +356,7 @@ void OnPresetOff() {
 
 bool fired_on_init_swapchain = false;
 
-void OnInitSwapchain(reshade::api::swapchain* swapchain) {
+void OnInitSwapchain(reshade::api::swapchain* swapchain, bool resize) {
   if (fired_on_init_swapchain) return;
   fired_on_init_swapchain = true;
   auto peak = renodx::utils::swapchain::GetPeakNits(swapchain);
@@ -317,9 +366,6 @@ void OnInitSwapchain(reshade::api::swapchain* swapchain) {
   }
 }
 
-static std::mt19937 random_generator(std::chrono::system_clock::now().time_since_epoch().count());
-static float random_range = (random_generator.max() - random_generator.min());
-
 void OnPresent(
     reshade::api::command_queue* queue,
     reshade::api::swapchain* swapchain,
@@ -327,9 +373,9 @@ void OnPresent(
     const reshade::api::rect* dest_rect,
     uint32_t dirty_rect_count,
     const reshade::api::rect* dirty_rects) {
-  shader_injection.random_1 = (float)(random_generator() + random_generator.min()) / random_range;
-  shader_injection.random_2 = (float)(random_generator() + random_generator.min()) / random_range;
-  shader_injection.random_3 = (float)(random_generator() + random_generator.min()) / random_range;
+  static std::mt19937 random_generator(std::chrono::system_clock::now().time_since_epoch().count());
+  static auto random_range = static_cast<float>(std::mt19937::max() - std::mt19937::min());
+  CUSTOM_RANDOM = static_cast<float>(random_generator() + std::mt19937::min()) / random_range;
 }
 
 }  // namespace
@@ -338,16 +384,20 @@ extern "C" __declspec(dllexport) constexpr const char* NAME = "RenoDX";
 extern "C" __declspec(dllexport) constexpr const char* DESCRIPTION = "RenoDX for Final Fantasy 7 REMAKE INTEGRADE";
 
 BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
+  if (fdw_reason == DLL_PROCESS_ATTACH && !reshade::register_addon(h_module)) return FALSE;
+
+  renodx::utils::shader::Use(fdw_reason);
+  renodx::utils::swapchain::Use(fdw_reason);
+
   switch (fdw_reason) {
     case DLL_PROCESS_ATTACH:
-      if (!reshade::register_addon(h_module)) return FALSE;
 
-      renodx::mods::shader::on_init_pipeline_layout = [](reshade::api::device* device, auto, auto) {
-        return device->get_api() == reshade::api::device_api::d3d12;
-      };
-
+      renodx::mods::shader::force_pipeline_cloning = true;
       renodx::mods::shader::allow_multiple_push_constants = true;
+      renodx::mods::shader::expected_constant_buffer_index = 13;
       renodx::mods::shader::expected_constant_buffer_space = 50;
+
+      renodx::mods::swapchain::SetUseHDR10(true);
 
       reshade::register_event<reshade::addon_event::init_swapchain>(OnInitSwapchain);
       reshade::register_event<reshade::addon_event::present>(OnPresent);
@@ -362,6 +412,9 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
 
   renodx::utils::settings::Use(fdw_reason, &settings, &OnPresetOff);
   renodx::mods::shader::Use(fdw_reason, custom_shaders, &shader_injection);
+  if (renodx::utils::settings::FindSetting("ProcessingForceHDR")->GetValue() == 1.f) {
+    renodx::mods::swapchain::Use(fdw_reason, &shader_injection);
+  }
 
   return TRUE;
 }

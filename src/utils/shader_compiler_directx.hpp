@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <atlbase.h>
+#include <comdef.h>
 #include <d3dcompiler.h>
 #include <dxcapi.h>
 #include <mmiscapi.h>
@@ -15,17 +15,21 @@
 #include <cstdint>
 #include <exception>
 #include <filesystem>
-#include <ios>
 #include <map>
 #include <mutex>
-#include <optional>
 #include <shared_mutex>
 #include <span>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "./path.hpp"
+
+_COM_SMARTPTR_TYPEDEF(IDxcCompiler, __uuidof(IDxcCompiler));
+_COM_SMARTPTR_TYPEDEF(IDxcLibrary, __uuidof(IDxcLibrary));
+_COM_SMARTPTR_TYPEDEF(IDxcBlobEncoding, __uuidof(IDxcBlobEncoding));
+_COM_SMARTPTR_TYPEDEF(IDxcIncludeHandler, __uuidof(IDxcIncludeHandler));
+_COM_SMARTPTR_TYPEDEF(ID3DBlob, __uuidof(ID3DBlob));
+_COM_SMARTPTR_TYPEDEF(IDxcOperationResult, __uuidof(IDxcOperationResult));
 
 namespace renodx::utils::shader::compiler::directx {
 
@@ -47,7 +51,7 @@ class FxcD3DInclude : public ID3DInclude {
   std::vector<std::pair<std::string, std::filesystem::path>> file_paths;
   std::map<std::filesystem::path, std::string> file_contents;
 
-  HRESULT __stdcall Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes) override {
+  HRESULT __stdcall Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes) noexcept override {
     std::filesystem::path new_path;
     if (pParentData != nullptr) {
       std::string parent_data = static_cast<const char*>(pParentData);
@@ -97,7 +101,7 @@ class FxcD3DInclude : public ID3DInclude {
     return S_OK;
   }
 
-  HRESULT __stdcall Close(LPCVOID pData) override {
+  HRESULT __stdcall Close(LPCVOID pData) noexcept override {
     if (pData != nullptr) {
       std::string data = static_cast<const char*>(pData);
       for (auto pair = file_paths.rbegin(); pair != file_paths.rend(); ++pair) {
@@ -155,6 +159,25 @@ inline HRESULT CreateCompiler(IDxcCompiler** dxc_compiler) {
       throw(__hr);            \
   }
 
+inline std::wstring ConvertToWide(const char* entrypoint, UINT code_page = CP_UTF8) {
+  if (entrypoint == nullptr) {
+    return {};
+  }
+
+  int wide_char_length = MultiByteToWideChar(code_page, 0, entrypoint, -1, nullptr, 0);
+  if (wide_char_length == 0) {
+    return {};
+  }
+
+  std::wstring wide_string(wide_char_length, L'\0');
+  MultiByteToWideChar(code_page, 0, entrypoint, -1, wide_string.data(), wide_char_length);
+
+  // Resize the string to remove the null terminator added by MultiByteToWideChar
+  wide_string.resize(wide_char_length - 1);
+
+  return wide_string;
+}
+
 inline HRESULT CompileFromBlob(
     IDxcBlobEncoding* source,
     LPCWSTR source_name,
@@ -166,8 +189,8 @@ inline HRESULT CompileFromBlob(
     UINT flags2,
     ID3DBlob** code,
     ID3DBlob** error_messages) {
-  CComPtr<IDxcCompiler> compiler;
-  CComPtr<IDxcOperationResult> operation_result;
+  IDxcCompilerPtr compiler;
+  IDxcOperationResultPtr operation_result;
   HRESULT hr;
 
   // Upconvert legacy targets
@@ -177,10 +200,11 @@ inline HRESULT CompileFromBlob(
     parsed_target[0] = target[0];
     target = parsed_target;
   }
+  const auto& minor_version = target[5];
 
   try {
-    const CA2W entrypoint_wide(entrypoint, CP_UTF8);
-    const CA2W target_profile_wide(target, CP_UTF8);
+    const std::wstring entrypoint_wide = ConvertToWide(entrypoint, CP_UTF8);
+    const std::wstring target_profile_wide = ConvertToWide(target, CP_UTF8);
     std::vector<std::wstring> define_values;
     std::vector<DxcDefine> new_defines;
     if (defines != nullptr) {
@@ -188,9 +212,9 @@ inline HRESULT CompileFromBlob(
 
       // Convert to UTF-16.
       while (cursor != nullptr && cursor->Name != nullptr) {
-        define_values.emplace_back(CA2W(cursor->Name, CP_UTF8));
+        define_values.emplace_back(ConvertToWide(cursor->Name, CP_UTF8));
         if (cursor->Definition != nullptr) {
-          define_values.emplace_back(CA2W(cursor->Definition, CP_UTF8));
+          define_values.emplace_back(ConvertToWide(cursor->Definition, CP_UTF8));
         } else {
           define_values.emplace_back(/* empty */);
         }
@@ -242,13 +266,16 @@ inline HRESULT CompileFromBlob(
     if ((flags1 & D3DCOMPILE_RESOURCES_MAY_ALIAS) != 0) arguments.push_back(L"/res_may_alias");
     arguments.push_back(L"/HV");
     arguments.push_back(L"2021");
+    if (minor_version >= '2') {
+      arguments.push_back(L"/enable-16bit-types");
+    }
 
     IFR(CreateCompiler(&compiler));
     IFR(compiler->Compile(
         source,
         source_name,
-        entrypoint_wide,
-        target_profile_wide,
+        entrypoint_wide.c_str(),
+        target_profile_wide.c_str(),
         arguments.data(),
         (UINT)arguments.size(),
         new_defines.data(),
@@ -257,8 +284,6 @@ inline HRESULT CompileFromBlob(
         &operation_result));
   } catch (const std::bad_alloc&) {
     return E_OUTOFMEMORY;
-  } catch (const CAtlException& err) {
-    return err.m_hr;
   }
 
   operation_result->GetStatus(&hr);
@@ -281,9 +306,9 @@ inline HRESULT WINAPI BridgeD3DCompileFromFile(
     UINT flags2,
     ID3DBlob** code,
     ID3DBlob** error_messages) {
-  CComPtr<IDxcLibrary> library;
-  CComPtr<IDxcBlobEncoding> source;
-  CComPtr<IDxcIncludeHandler> include_handler;
+  IDxcLibraryPtr library;
+  IDxcBlobEncodingPtr source;
+  IDxcIncludeHandlerPtr include_handler;
 
   *code = nullptr;
   if (error_messages != nullptr) {
@@ -311,7 +336,7 @@ inline std::vector<uint8_t> CompileShaderFromFileFXC(
     LPCWSTR file_path,
     LPCSTR shader_target,
     const D3D_SHADER_MACRO* defines = nullptr) {
-  CComPtr<ID3DBlob> out_blob;
+  ID3DBlobPtr out_blob;
 
   if (fxc_compiler_library == nullptr) {
     std::stringstream s;
@@ -341,7 +366,7 @@ inline std::vector<uint8_t> CompileShaderFromFileFXC(
   auto custom_include = FxcD3DInclude(file_path);
 
   std::unique_lock lock(mutex_fxc_compiler);
-  CComPtr<ID3DBlob> error_blob;
+  ID3DBlobPtr error_blob;
   if (FAILED(d3d_compilefromfile(
           file_path,
           defines,
@@ -371,8 +396,8 @@ inline std::vector<uint8_t> CompileShaderFromFileDXC(
     const D3D_SHADER_MACRO* defines = nullptr) {
   std::vector<uint8_t> result;
 
-  CComPtr<ID3DBlob> out_blob;
-  CComPtr<ID3DBlob> error_blob;
+  ID3DBlobPtr out_blob;
+  ID3DBlobPtr error_blob;
   std::unique_lock lock(mutex_dxc_compiler);
   if (FAILED(internal::BridgeD3DCompileFromFile(
           file_path,
@@ -407,7 +432,7 @@ inline std::string DisassembleShaderFXC(std::span<uint8_t> blob) {
 
   // Function may not be thread-safe
   std::unique_lock lock(mutex_fxc_compiler);
-  CComPtr<ID3DBlob> out_blob;
+  ID3DBlobPtr out_blob;
   if (FAILED(d3d_disassemble(
           blob.data(),
           blob.size(),
@@ -423,18 +448,18 @@ inline std::string DisassembleShaderFXC(std::span<uint8_t> blob) {
 }
 
 inline std::string DisassembleShaderDXC(std::span<uint8_t> blob) {
-  CComPtr<IDxcLibrary> library;
-  CComPtr<IDxcCompiler> compiler;
-  CComPtr<IDxcBlobEncoding> source;
-  CComPtr<IDxcBlobEncoding> disassembly_text;
-  CComPtr<ID3DBlob> disassembly;
+  IDxcLibraryPtr library;
+  IDxcCompilerPtr compiler;
+  IDxcBlobEncodingPtr source;
+  IDxcBlobEncodingPtr disassembly_text;
+  ID3DBlobPtr disassembly;
 
   std::unique_lock lock(mutex_dxc_compiler);
   if (FAILED(internal::CreateLibrary(&library))) throw std::exception("Could not create library.");
   if (FAILED(library->CreateBlobWithEncodingFromPinned(blob.data(), blob.size(), CP_ACP, &source))) throw std::exception("Could not prepare blob.");
   if (FAILED(internal::CreateCompiler(&compiler))) throw std::exception("Could not create compiler object.");
   if (FAILED(compiler->Disassemble(source, &disassembly_text))) throw std::exception("Could not disassemble.");
-  if (FAILED(disassembly_text.QueryInterface(&disassembly))) throw std::exception("Could not find diassembly");
+  if (FAILED(disassembly_text->QueryInterface(&disassembly))) throw std::exception("Could not find diassembly");
 
   return {
       reinterpret_cast<char*>(disassembly->GetBufferPointer()),
@@ -492,6 +517,12 @@ inline DxilProgramVersion DecodeShaderVersion(std::span<uint8_t> blob) {
     case FourCC('D', 'X', 'I', 'L'):
       break;
     default:
+      // DX9 Shader
+      if (blob[3] == 0xFF) {
+        return DxilProgramVersion{
+            .value = static_cast<uint32_t>((0xFF - blob[2]) << 16 | (blob[1] << 4) | (blob[0] << 0))};
+      }
+      assert(false);
       throw std::exception("Unrecognized header.");
   }
 

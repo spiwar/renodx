@@ -8,39 +8,88 @@
 #include <cassert>
 #include <include/reshade.hpp>
 #include <include/reshade_api_pipeline.hpp>
-#include <memory>
+#include <mutex>
 #include <shared_mutex>
+#include <sstream>
 #include <unordered_map>
 #include <vector>
 
-namespace renodx::utils::pipeline_layout {
+#include "./data.hpp"
+#include "./format.hpp"
 
-static bool is_primary_hook = false;
+namespace renodx::utils::pipeline_layout {
 
 struct PipelineLayoutData {
   std::vector<reshade::api::pipeline_layout_param> params;
   std::vector<std::vector<reshade::api::descriptor_range>> ranges;
   std::vector<reshade::api::descriptor_table> tables;
-  reshade::api::pipeline_layout replacement_layout;
+  reshade::api::pipeline_layout layout = {0u};
+  reshade::api::pipeline_layout replacement_layout = {0u};
+  reshade::api::pipeline_layout injection_layout = {0u};
+  int32_t injection_index = -1;
+  bool failed_injection = false;
 };
 
-struct __declspec(uuid("96f1f53b-90cb-4929-92d7-9a7a1a5c2493")) DeviceData {
+static struct Store {
+  std::shared_mutex pipeline_layout_data_mutex;
   std::unordered_map<uint64_t, PipelineLayoutData> pipeline_layout_data;
+} local_store;
 
-  std::shared_mutex mutex;
+static Store* store = &local_store;
+
+static bool is_primary_hook = false;
+
+static PipelineLayoutData* GetPipelineLayoutData(const reshade::api::pipeline_layout& layout, bool create = false) {
+  {
+    std::shared_lock lock(store->pipeline_layout_data_mutex);
+    auto pair = store->pipeline_layout_data.find(layout.handle);
+    if (pair != store->pipeline_layout_data.end()) return &pair->second;
+    if (!create) return nullptr;
+  }
+
+  {
+    std::unique_lock write_lock(store->pipeline_layout_data_mutex);
+    auto& info = store->pipeline_layout_data.insert({layout.handle, PipelineLayoutData({.layout = layout})}).first->second;
+    return &info;
+  }
+}
+
+struct __declspec(uuid("080a74f2-9a2a-4af6-bb2c-8d083e0a354d")) DeviceData {
+  Store* store;
 };
 
 static void OnInitDevice(reshade::api::device* device) {
-  auto* data = &device->get_private_data<DeviceData>();
-  if (data != nullptr) return;
+  DeviceData* data;
+  bool created = renodx::utils::data::CreateOrGet(device, data);
 
-  data = &device->create_private_data<DeviceData>();
+  if (created) {
+    std::stringstream s;
+    s << "utils::pipeline_layout::OnInitDevice(Hooking device: ";
+    s << PRINT_PTR(reinterpret_cast<uintptr_t>(device));
+    s << ", api: " << device->get_api();
+    s << ")";
+    reshade::log::message(reshade::log::level::debug, s.str().c_str());
 
-  is_primary_hook = true;
+    is_primary_hook = true;
+    data->store = store;
+  } else {
+    std::stringstream s;
+    s << "utils::pipeline_layout::OnInitDevice(Attaching to hook: ";
+    s << PRINT_PTR(reinterpret_cast<uintptr_t>(device));
+    s << ", api: " << device->get_api();
+    s << ")";
+    reshade::log::message(reshade::log::level::debug, s.str().c_str());
+    store = data->store;
+  }
 }
 
 static void OnDestroyDevice(reshade::api::device* device) {
   if (!is_primary_hook) return;
+  std::stringstream s;
+  s << "utils::resource::OnDestroyDevice(";
+  s << reinterpret_cast<uintptr_t>(device);
+  s << ")";
+  reshade::log::message(reshade::log::level::info, s.str().c_str());
   device->destroy_private_data<DeviceData>();
 }
 
@@ -49,14 +98,11 @@ static void OnInitPipelineLayout(
     const uint32_t param_count,
     const reshade::api::pipeline_layout_param* params,
     reshade::api::pipeline_layout layout) {
-  if (!is_primary_hook) return;
-  auto& data = device->get_private_data<DeviceData>();
-  const std::unique_lock lock(data.mutex);
+  auto* layout_data = GetPipelineLayoutData(layout, true);
 
-  PipelineLayoutData& layout_data = data.pipeline_layout_data[layout.handle];
-  layout_data.params.assign(params, params + param_count);
-  layout_data.ranges.resize(param_count);
-  layout_data.tables.resize(param_count);
+  layout_data->params.assign(params, params + param_count);
+  layout_data->ranges.resize(param_count);
+  layout_data->tables.resize(param_count);
 
   for (uint32_t i = 0; i < param_count; ++i) {
     const auto& param = params[i];
@@ -64,18 +110,10 @@ static void OnInitPipelineLayout(
       case reshade::api::pipeline_layout_param_type::descriptor_table:
         if (param.descriptor_table.count == 0u) continue;
         {
-          auto& ranges = layout_data.ranges[i];
-          if (param.descriptor_table.ranges->count != UINT32_MAX) {
-            ranges.assign(
-                param.descriptor_table.ranges,
-                param.descriptor_table.ranges + param.descriptor_table.count);
-          } else {
-            ranges.assign(
-                param.descriptor_table.ranges,
-                param.descriptor_table.ranges + 1);
-          }
-          layout_data.params[i] = param;
-          layout_data.params[i].descriptor_table.ranges = ranges.data();
+          layout_data->ranges[i].assign(
+              param.descriptor_table.ranges,
+              param.descriptor_table.ranges + param.descriptor_table.count);
+          layout_data->params[i].descriptor_table.ranges = layout_data->ranges[i].data();
         }
         break;
       case reshade::api::pipeline_layout_param_type::push_constants:
@@ -94,32 +132,8 @@ static void OnInitPipelineLayout(
 static void OnDestroyPipelineLayout(
     reshade::api::device* device,
     reshade::api::pipeline_layout layout) {
-  if (!is_primary_hook) return;
-  auto& data = device->get_private_data<DeviceData>();
-  const std::unique_lock lock(data.mutex);
-  data.pipeline_layout_data.erase(layout.handle);
-}
-
-static void RegisterPipelineLayoutClone(
-    reshade::api::device* device,
-    reshade::api::pipeline_layout layout_original,
-    reshade::api::pipeline_layout layout_clone) {
-  auto& data = device->get_private_data<DeviceData>();
-  if (std::addressof(data) == nullptr) return;
-  const std::unique_lock lock(data.mutex);
-  auto& entry = data.pipeline_layout_data[layout_original.handle];
-  entry.replacement_layout = layout_clone;
-}
-
-static reshade::api::pipeline_layout GetPipelineLayoutClone(
-    reshade::api::device* device,
-    reshade::api::pipeline_layout layout_original) {
-  auto& data = device->get_private_data<DeviceData>();
-  if (std::addressof(data) == nullptr) return {0};
-  const std::shared_lock lock(data.mutex);
-  auto pair = data.pipeline_layout_data.find(layout_original.handle);
-  if (pair == data.pipeline_layout_data.end()) return {0};
-  return pair->second.replacement_layout;
+  const std::unique_lock lock(store->pipeline_layout_data_mutex);
+  store->pipeline_layout_data.erase(layout.handle);
 }
 
 static bool attached = false;

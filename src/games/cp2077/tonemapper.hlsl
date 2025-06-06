@@ -178,7 +178,7 @@ float3 SampleLUT(float4 lutSettings, const float3 inputColor, uint textureIndex,
     }
 
     if (_504 == 1u) {
-      color = renodx::color::srgb::Encode(color);
+      color = renodx::color::srgb::EncodeSafe(color);
     } else if (_504 == 2u) {
       color = renodx::color::arri::logc::c800::Encode(color);
     }
@@ -195,7 +195,7 @@ float3 SampleLUT(float4 lutSettings, const float3 inputColor, uint textureIndex,
     float3 lutOutputColor = color;
 
     if ((_503 & 240u) == 16u) {
-      color = renodx::color::srgb::Decode(color);
+      color = renodx::color::srgb::DecodeSafe(color);
     }
 
     float3 lutOutputLinear = color;
@@ -217,7 +217,7 @@ float3 SampleLUT(float4 lutSettings, const float3 inputColor, uint textureIndex,
 
         float3 recolored = renodx::lut::RecolorUnclamped(
             lutOutputLinear,
-            renodx::color::srgb::Decode(unclamped));
+            renodx::color::srgb::DecodeSafe(unclamped));
         color = lerp(color, recolored, min(injectedData.processingLUTCorrection * 2.f, 1.f));
       } else {
         const float lutMinY = renodx::color::y::from::BT709(abs(minBlack));
@@ -562,6 +562,12 @@ float4 tonemap(bool isACESMode = false) {
       config.reno_drt_shadows = 1.20f;
       config.reno_drt_contrast = 1.3f;
       config.reno_drt_saturation = 1.20f;
+      config.reno_drt_blowout = -1.f * (injectedData.colorGradeHighlightSaturation - 1.f);
+      if (injectedData.toneMapPerChannel == 1.f) {
+        config.reno_drt_per_channel = true;
+        config.reno_drt_working_color_space = 2u;
+        config.hue_correction_strength = 0;
+      }
       config.reno_drt_dechroma = injectedData.colorGradeBlowout;
       config.reno_drt_flare = 0.005 * injectedData.colorGradeFlare;
       config.reno_drt_hue_correction_method = (uint)injectedData.toneMapHueProcessor;
@@ -574,11 +580,9 @@ float4 tonemap(bool isACESMode = false) {
 
       if (injectedData.toneMapGammaCorrection == 2.f) {
         outputRGB = renodx::color::correct::GammaSafe(outputRGB);
-        outputRGB *= config.game_nits / 100.f;
-        outputRGB = renodx::color::correct::GammaSafe(outputRGB, true);
-      } else {
-        outputRGB *= config.game_nits / 100.f;
       }
+
+      outputRGB *= config.game_nits / 100.f;
     }
 
   } else {

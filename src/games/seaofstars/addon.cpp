@@ -7,13 +7,7 @@
 
 #define DEBUG_LEVEL_0
 
-#include <algorithm>
-
-#include <embed/0x552A4A60.h>
-#include <embed/0x67758842.h>
-#include <embed/0x72B31CDE.h>
-#include <embed/0x77850945.h>
-#include <embed/0xB646820B.h>
+#include <embed/shaders.h>
 
 #include <deps/imgui/imgui.h>
 #include <include/reshade.hpp>
@@ -25,12 +19,26 @@
 
 namespace {
 
+bool UpgradeRTVReplaceShader(reshade::api::command_list* cmd_list) {
+  auto rtvs = renodx::utils::swapchain::GetRenderTargets(cmd_list);
+  bool changed = false;
+  for (auto rtv : rtvs) {
+    changed = renodx::mods::swapchain::ActivateCloneHotSwap(cmd_list->get_device(), rtv);
+  }
+  if (changed) {
+    renodx::mods::swapchain::FlushDescriptors(cmd_list);
+    renodx::mods::swapchain::RewriteRenderTargets(cmd_list, rtvs.size(), rtvs.data(), {0});
+  }
+  return true;
+}
+
 renodx::mods::shader::CustomShaders custom_shaders = {
     CustomShaderEntry(0x552A4A60),
-    CustomShaderEntry(0x72B31CDE),
     CustomShaderEntry(0x67758842),
-    CustomShaderEntry(0x77850945),
     CustomShaderEntry(0xB646820B),
+    CustomShaderEntry(0x77850945),
+    CustomShaderEntry(0xC1637E4E),
+    CustomShaderEntryCallback(0x72B31CDE, &UpgradeRTVReplaceShader),
 };
 
 ShaderInjectData shader_injection;
@@ -249,11 +257,7 @@ void OnPresetOff() {
 
 auto last_is_hdr = false;
 
-float ComputeReferenceWhite(float peak_nits) {
-  return std::clamp(roundf(powf(10.f, 0.03460730900256f + (0.757737096673107f * log10f(peak_nits)))), 100.f, 300.f);
-}
-
-void OnInitSwapchain(reshade::api::swapchain* swapchain) {
+void OnInitSwapchain(reshade::api::swapchain* swapchain, bool resize) {
   last_is_hdr = renodx::utils::swapchain::IsHDRColorSpace(swapchain);
   if (!last_is_hdr) {
     settings[1]->default_value = 80.f;
@@ -270,7 +274,7 @@ void OnInitSwapchain(reshade::api::swapchain* swapchain) {
     settings[1]->default_value = 1000.f;
   }
 
-  settings[2]->default_value = ComputeReferenceWhite(settings[1]->default_value);
+  settings[2]->default_value = renodx::utils::swapchain::ComputeReferenceWhite(settings[1]->default_value);
 
   auto white_level = renodx::utils::swapchain::GetSDRWhiteNits(swapchain);
   if (white_level.has_value()) {
@@ -291,11 +295,13 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
     case DLL_PROCESS_ATTACH:
       if (!reshade::register_addon(h_module)) return FALSE;
 
+      renodx::mods::swapchain::use_resource_cloning = true;
       renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({
           .old_format = reshade::api::format::r8g8b8a8_typeless,
           .new_format = reshade::api::format::r16g16b16a16_float,
-          .index = 0,
-          .aspect_ratio = 16.f / 9.f,
+          .ignore_size = true,
+          .use_resource_view_cloning = true,
+          .use_resource_view_hot_swap = true,
       });
       renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({
           .old_format = reshade::api::format::r11g11b10_float,

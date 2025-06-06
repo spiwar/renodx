@@ -9,6 +9,12 @@
 
 #include <embed/0xEC834D82.h>
 #include <embed/0x6457104F.h>
+#include <embed/0xDAA8E1E9.h>
+#include <embed/0x0C454543.h>
+#include <embed/0x3F8A5A79.h>
+#include <embed/0x64B4F8D8.h>
+#include <embed/0x21303C74.h>
+#include <embed/0x63693A7F.h>
 
 #include <embed/0xFFFFFFFD.h>  // Custom final VS
 #include <embed/0xFFFFFFFE.h>  // Custom final PS
@@ -26,6 +32,12 @@ namespace {
 renodx::mods::shader::CustomShaders custom_shaders = {
     CustomShaderEntry(0xEC834D82),
     CustomShaderEntry(0x6457104F),
+    CustomShaderEntry(0xDAA8E1E9),
+    CustomShaderEntry(0x0C454543),
+    CustomShaderEntry(0x3F8A5A79),
+    CustomShaderEntry(0x64B4F8D8),
+    CustomShaderEntry(0x21303C74),
+    CustomShaderEntry(0x63693A7F),
 };
 
 ShaderInjectData shader_injection;
@@ -54,14 +66,37 @@ renodx::utils::settings::Settings settings = {
         .max = 500.f,
     },
     new renodx::utils::settings::Setting{
+        .key = "BloomAmount",
+        .binding = &shader_injection.BloomAmount,
+        .default_value = 1.f,
+        .can_reset = true,
+        .label = "Bloom Amount",
+        .section = "FX",
+        .tooltip = "Game's default bloom shader amount",
+        .min = 0.f,
+        .max = 2.f,
+        .format = "%.2f",
+    },
+    new renodx::utils::settings::Setting{
+        .key = "FogAmount",
+        .binding = &shader_injection.FogAmount,
+        .default_value = 1.f,
+        .can_reset = true,
+        .label = "Fog Amount",
+        .section = "FX",
+        .tooltip = "Game's default fog shader amount",
+        .min = 0.f,
+        .max = 2.f,
+        .format = "%.2f",
+    },
+    new renodx::utils::settings::Setting{
         .value_type = renodx::utils::settings::SettingValueType::BUTTON,
         .label = "Discord",
         .section = "Links",
         .group = "button-line-1",
         .tint = 0x5865F2,
         .on_change = []() {
-          static const std::string obfuscated_link = std::string("start https://discord.gg/J9fM") + std::string("3EVuEZ");
-          system(obfuscated_link.c_str());
+          renodx::utils::platform::LaunchURL("https://discord.gg/J9fM", "3EVuEZ");
         },
     },
     new renodx::utils::settings::Setting{
@@ -70,7 +105,7 @@ renodx::utils::settings::Settings settings = {
         .section = "Links",
         .group = "button-line-1",
         .on_change = []() {
-          system("start https://github.com/clshortfuse/renodx");
+          renodx::utils::platform::LaunchURL("https://github.com/clshortfuse/renodx");
         },
     },
     new renodx::utils::settings::Setting{
@@ -80,7 +115,7 @@ renodx::utils::settings::Settings settings = {
         .group = "button-line-1",
         .tint = 0xFF5F5F,
         .on_change = []() {
-          system("start https://buymeacoffee.com/realfiloppi");
+          renodx::utils::platform::LaunchURL("https://buymeacoffee.com/realfiloppi");
         },
     },
 };
@@ -109,7 +144,7 @@ struct __declspec(uuid("1228220F-364A-46A2-BB29-1CCE591A018A")) DeviceData {
 constexpr reshade::api::pipeline_layout PIPELINE_LAYOUT{0};
 
 void OnInitDevice(reshade::api::device* device) {
-  auto& data = device->create_private_data<DeviceData>();
+  auto* data = device->create_private_data<DeviceData>();
 
   // create pipeline
   {
@@ -161,7 +196,7 @@ void OnInitDevice(reshade::api::device* device) {
 
     subobjects.push_back({reshade::api::pipeline_subobject_type::depth_stencil_state, 1, &depth_stencil_state});
 
-    device->create_pipeline(PIPELINE_LAYOUT, static_cast<uint32_t>(subobjects.size()), subobjects.data(), &data.final_pipeline);
+    device->create_pipeline(PIPELINE_LAYOUT, static_cast<uint32_t>(subobjects.size()), subobjects.data(), &data->final_pipeline);
   }
 
   // create layout
@@ -171,24 +206,24 @@ void OnInitDevice(reshade::api::device* device) {
     new_params.push_constants.count = 1;
     new_params.push_constants.dx_register_index = 13;
     new_params.push_constants.visibility = reshade::api::shader_stage::vertex | reshade::api::shader_stage::pixel | reshade::api::shader_stage::compute;
-    device->create_pipeline_layout(1, &new_params, &data.final_layout);
+    device->create_pipeline_layout(1, &new_params, &data->final_layout);
   }
 }
 
 void OnDestroyDevice(reshade::api::device* device) {
-  auto& data = device->get_private_data<DeviceData>();
+  auto* data = device->get_private_data<DeviceData>();
 
-  device->destroy_pipeline(data.final_pipeline);
-  device->destroy_pipeline_layout(data.final_layout);
+  device->destroy_pipeline(data->final_pipeline);
+  device->destroy_pipeline_layout(data->final_layout);
 
   device->destroy_private_data<DeviceData>();
 }
 
 bool fired_on_init_swapchain = false;
 
-void OnInitSwapchain(reshade::api::swapchain* swapchain) {
+void OnInitSwapchain(reshade::api::swapchain* swapchain, bool resize) {
   auto device = swapchain->get_device();
-  auto& data = device->get_private_data<DeviceData>();
+  auto* data = device->get_private_data<DeviceData>();
 
   if (!fired_on_init_swapchain) {
     fired_on_init_swapchain = true;
@@ -203,7 +238,7 @@ void OnInitSwapchain(reshade::api::swapchain* swapchain) {
     auto back_buffer_resource = swapchain->get_back_buffer(i);
     auto back_buffer_desc = device->get_resource_desc(back_buffer_resource);
     auto desc = reshade::api::resource_view_desc(reshade::api::resource_view_type::texture_2d, reshade::api::format_to_default_typed(back_buffer_desc.texture.format), 0, 1, 0, 1);
-    device->create_resource_view(back_buffer_resource, reshade::api::resource_usage::render_target, desc, &data.swapchain_rtvs.emplace_back());
+    device->create_resource_view(back_buffer_resource, reshade::api::resource_usage::render_target, desc, &data->swapchain_rtvs.emplace_back());
   }
 
   // create copy target
@@ -223,25 +258,25 @@ void OnInitSwapchain(reshade::api::swapchain* swapchain) {
     desc.heap = reshade::api::memory_heap::gpu_only;
     desc.usage = reshade::api::resource_usage::copy_dest | reshade::api::resource_usage::shader_resource;
     desc.flags = reshade::api::resource_flags::none;
-    device->create_resource(desc, nullptr, reshade::api::resource_usage::shader_resource, &data.final_texture);
-    device->create_resource_view(data.final_texture, reshade::api::resource_usage::shader_resource, reshade::api::resource_view_desc(reshade::api::format_to_default_typed(desc.texture.format)), &data.final_texture_view);
-    device->create_sampler({}, &data.final_texture_sampler);
+    device->create_resource(desc, nullptr, reshade::api::resource_usage::shader_resource, &data->final_texture);
+    device->create_resource_view(data->final_texture, reshade::api::resource_usage::shader_resource, reshade::api::resource_view_desc(reshade::api::format_to_default_typed(desc.texture.format)), &data->final_texture_view);
+    device->create_sampler({}, &data->final_texture_sampler);
   }
 }
 
-void OnDestroySwapchain(reshade::api::swapchain* swapchain) {
+void OnDestroySwapchain(reshade::api::swapchain* swapchain, bool resize) {
   auto device = swapchain->get_device();
-  auto& data = device->get_private_data<DeviceData>();
+  auto* data = device->get_private_data<DeviceData>();
 
-  for (const auto& rtv : data.swapchain_rtvs) {
+  for (const auto& rtv : data->swapchain_rtvs) {
     device->destroy_resource_view(rtv);
   }
 
-  data.swapchain_rtvs.clear();
+  data->swapchain_rtvs.clear();
 
-  device->destroy_sampler(data.final_texture_sampler);
-  device->destroy_resource_view(data.final_texture_view);
-  device->destroy_resource(data.final_texture);
+  device->destroy_sampler(data->final_texture_sampler);
+  device->destroy_resource_view(data->final_texture_view);
+  device->destroy_resource(data->final_texture);
 }
 
 // more or less the same as what reshade does to render its techniques
@@ -249,35 +284,35 @@ void OnPresent(reshade::api::command_queue* queue, reshade::api::swapchain* swap
   auto device = queue->get_device();
   auto cmd_list = queue->get_immediate_command_list();
 
-  auto& data = device->get_private_data<DeviceData>();
+  auto* data = device->get_private_data<DeviceData>();
 
   auto back_buffer_resource = swapchain->get_current_back_buffer();
   auto back_buffer_desc = device->get_resource_desc(back_buffer_resource);
 
   // copy backbuffer
   {
-    const reshade::api::resource resources[2] = {back_buffer_resource, data.final_texture};
+    const reshade::api::resource resources[2] = {back_buffer_resource, data->final_texture};
     const reshade::api::resource_usage state_old[2] = {reshade::api::resource_usage::render_target, reshade::api::resource_usage::shader_resource};
     const reshade::api::resource_usage state_new[2] = {reshade::api::resource_usage::copy_source, reshade::api::resource_usage::copy_dest};
 
     cmd_list->barrier(2, resources, state_old, state_new);
-    cmd_list->copy_texture_region(back_buffer_resource, 0, nullptr, data.final_texture, 0, nullptr);
+    cmd_list->copy_texture_region(back_buffer_resource, 0, nullptr, data->final_texture, 0, nullptr);
     cmd_list->barrier(2, resources, state_new, state_old);
   }
 
-  cmd_list->bind_pipeline(reshade::api::pipeline_stage::all_graphics, data.final_pipeline);
+  cmd_list->bind_pipeline(reshade::api::pipeline_stage::all_graphics, data->final_pipeline);
 
   cmd_list->barrier(back_buffer_resource, reshade::api::resource_usage::shader_resource, reshade::api::resource_usage::render_target);
 
   reshade::api::render_pass_render_target_desc render_target = {};
-  render_target.view = data.swapchain_rtvs.at(swapchain->get_current_back_buffer_index());
+  render_target.view = data->swapchain_rtvs.at(swapchain->get_current_back_buffer_index());
   cmd_list->begin_render_pass(1, &render_target, nullptr);
 
-  cmd_list->push_descriptors(reshade::api::shader_stage::all_graphics, PIPELINE_LAYOUT, 0, reshade::api::descriptor_table_update{{}, 0, 0, 1, reshade::api::descriptor_type::texture_shader_resource_view, &data.final_texture_view});
-  cmd_list->push_descriptors(reshade::api::shader_stage::all_graphics, PIPELINE_LAYOUT, 0, reshade::api::descriptor_table_update{{}, 0, 0, 1, reshade::api::descriptor_type::sampler, &data.final_texture_sampler});
+  cmd_list->push_descriptors(reshade::api::shader_stage::all_graphics, PIPELINE_LAYOUT, 0, reshade::api::descriptor_table_update{{}, 0, 0, 1, reshade::api::descriptor_type::texture_shader_resource_view, &data->final_texture_view});
+  cmd_list->push_descriptors(reshade::api::shader_stage::all_graphics, PIPELINE_LAYOUT, 0, reshade::api::descriptor_table_update{{}, 0, 0, 1, reshade::api::descriptor_type::sampler, &data->final_texture_sampler});
 
   // push the renodx settings
-  cmd_list->push_constants(reshade::api::shader_stage::all_graphics, data.final_layout, 0, 0, sizeof(shader_injection) / 4, &shader_injection);
+  cmd_list->push_constants(reshade::api::shader_stage::all_graphics, data->final_layout, 0, 0, sizeof(shader_injection) / 4, &shader_injection);
 
   const reshade::api::viewport viewport = {
       0.0f, 0.0f,

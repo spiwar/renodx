@@ -68,12 +68,12 @@ renodx::utils::settings::Settings settings = {
         .key = "ToneMapSonar",
         .binding = &RENODX_TONE_MAP_SONAR,
         .value_type = renodx::utils::settings::SettingValueType::INTEGER,
-        .default_value = 1.f,
+        .default_value = 2.f,
         .can_reset = true,
         .label = "Tone Map Sonar",
         .section = "Tone Mapping",
         .tooltip = "Tone Map or clamp the sonar goggles",
-        .labels = {"Clamp", "Tonemap"},
+        .labels = {"Off", "Clamp", "Tonemap"},
         .is_enabled = []() { return settings[0]->GetValue() == 2; },
     },
     new renodx::utils::settings::Setting{
@@ -184,9 +184,7 @@ renodx::utils::settings::Settings settings = {
         .group = "button-line-2",
         .tint = 0x5865F2,
         .on_change = []() {
-          renodx::utils::platform::Launch(
-              "https://discord.gg/"
-              "5WZXDpmbpP");
+          renodx::utils::platform::LaunchURL("https://discord.gg/", "5WZXDpmbpP");
         },
     },
     new renodx::utils::settings::Setting{
@@ -196,7 +194,7 @@ renodx::utils::settings::Settings settings = {
         .group = "button-line-2",
         .tint = 0x2B3137,
         .on_change = []() {
-          renodx::utils::platform::Launch("https://github.com/clshortfuse/renodx/wiki/Mods");
+          renodx::utils::platform::LaunchURL("https://github.com/clshortfuse/renodx/wiki/Mods");
         },
 
     },
@@ -207,7 +205,7 @@ renodx::utils::settings::Settings settings = {
         .group = "button-line-2",
         .tint = 0x2B3137,
         .on_change = []() {
-          renodx::utils::platform::Launch("https://github.com/clshortfuse/renodx");
+          renodx::utils::platform::LaunchURL("https://github.com/clshortfuse/renodx");
         },
     },
     new renodx::utils::settings::Setting{
@@ -216,7 +214,7 @@ renodx::utils::settings::Settings settings = {
         .section = "Links",
         .group = "button-line-3",
         .tint = 0xFF5A16,
-        .on_change = []() { renodx::utils::platform::Launch("https://ko-fi.com/musaqh"); },
+        .on_change = []() { renodx::utils::platform::LaunchURL("https://ko-fi.com/musaqh"); },
     },
     new renodx::utils::settings::Setting{
         .value_type = renodx::utils::settings::SettingValueType::TEXT,
@@ -249,7 +247,7 @@ void OnPresetOff() {
 }
 
 bool fired_on_init_swapchain = false;
-void OnInitSwapchain(reshade::api::swapchain* swapchain) {
+void OnInitSwapchain(reshade::api::swapchain* swapchain, bool resize) {
   if (fired_on_init_swapchain) return;
   fired_on_init_swapchain = true;
   auto peak = renodx::utils::swapchain::GetPeakNits(swapchain);

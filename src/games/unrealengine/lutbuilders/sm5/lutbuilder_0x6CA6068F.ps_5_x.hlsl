@@ -161,6 +161,9 @@ void main(
   r0.y = dot(float3(0.0702069029, 0.916335821, 0.0134500116), r1.xyz);
   r0.z = dot(float3(0.0206188709, 0.109567292, 0.869606733), r1.xyz);
   r0.w = dot(r0.xyz, float3(0.272228718, 0.674081743, 0.0536895171));
+
+  SetUngradedAP1(r0.xyz);
+
   r1.xyzw = cb0[45].xyzw * cb0[40].xyzw;
   r2.xyzw = cb0[46].xyzw * cb0[41].xyzw;
   r3.xyzw = cb0[47].xyzw * cb0[42].xyzw;
@@ -246,7 +249,7 @@ void main(
   r0.xyz = r1.xyz * r1.www + r0.xyz;
   r0.xyz = r2.xyz * r3.yyy + r0.xyz;
 
-  float3 untonemapped_ap1 = r0.xyz;
+  SetUntonemappedAP1(r0.xyz);
 
   // AP1 => BT709
   r1.x = dot(float3(1.70505154, -0.621790707, -0.0832583979), r0.xyz);
@@ -278,6 +281,9 @@ void main(
     r0.xyz = r0.xyz * cb0[25].www + r2.xyz;
     r0.xyz = r4.xyz * r3.xyz + r0.xyz;
     r0.xyz = float3(-0.00200000009, -0.00200000009, -0.00200000009) + r0.xyz;
+
+    SetTonemappedBT709(r0.xyz);
+
   } else {
     r0.w = dot(float3(0.439700812, 0.382978052, 0.1773348), r1.xyz);
     r2.y = dot(float3(0.0897923037, 0.813423157, 0.096761629), r1.xyz);
@@ -413,6 +419,9 @@ void main(
     r3.x = dot(float3(1.70505154, -0.621790707, -0.0832583979), r2.xyz);
     r3.y = dot(float3(-0.130257145, 1.14080286, -0.0105485283), r2.xyz);
     r3.z = dot(float3(-0.0240032747, -0.128968775, 1.15297174), r2.xyz);
+
+    SetTonemappedBT709(r3.xyz);
+
     r0.xyz = max(float3(0, 0, 0), r3.xyz);
   }
   r0.xyz = saturate(r0.xyz);
@@ -456,12 +465,13 @@ void main(
   r0.xyz = cb0[22].yyy * r0.xyz;
   r2.xyz = exp2(r0.xyz);
 
-  if (injectedData.toneMapType != 0) {
-    o0 = LutBuilderToneMap(untonemapped_ap1, r2.xyz);
+  if (RENODX_TONE_MAP_TYPE != 0) {
+    o0 = GenerateOutput(r2.xyz, asuint(cb0[60].z));
     return;
   }
 
-  if (cb0[60].z == 0) {
+  [branch]
+  if (asuint(cb0[60].z) == 0) {
     r3.xyz = float3(12.9200001, 12.9200001, 12.9200001) * r2.xyz;
     r4.xyz = cmp(r2.xyz >= float3(0.00313066994, 0.00313066994, 0.00313066994));
     r0.xyz = float3(0.416666657, 0.416666657, 0.416666657) * r0.xyz;
@@ -1424,5 +1434,8 @@ void main(
   }
   o0.xyz = float3(0.952381015, 0.952381015, 0.952381015) * r0.xyz;
   o0.w = 0;
+
+  o0 = saturate(o0);
+
   return;
 }

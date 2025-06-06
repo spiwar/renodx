@@ -79,8 +79,17 @@ void main(
 
   r0.xy = v1.xy * ScreenExtents.zw + ScreenExtents.xy;
   r1.xyzw = p_default_Material_0250670415711109_Param_texture.Sample(p_default_Material_0250670415711109_Param_sampler_s, r0.xy).xyzw;
+
+  r1 = max(0, r1);
+
   r2.xyzw = p_default_Material_02507D44234140_Param_texture.Sample(p_default_Material_02507D44234140_Param_sampler_s, r0.xy).xyzw;
+
+  r2 = max(0, r2);
+
   r0.xyzw = p_default_Material_15527DCC2149906_Param_texture.Sample(p_default_Material_15527DCC2149906_Param_sampler_s, r0.xy).xyzw;
+
+  r0 = max(0, r0);
+
   r0.w = (int)v0.x * 24;
   r2.xyz = InstanceParameters[r0.w].InstanceParams[0].yyy * r2.xyz;
   r1.xyz = r1.xyz * InstanceParameters[r0.w].InstanceParams[0].xxx + r2.xyz;

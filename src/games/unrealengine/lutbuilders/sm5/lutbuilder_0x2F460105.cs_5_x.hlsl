@@ -12,7 +12,8 @@ RWTexture3D<float4> u0 : register(u0);
 // 3Dmigoto declarations
 #define cmp -
 
-[numthreads(8, 8, 8)] void main(uint3 vThreadID: SV_DispatchThreadID) {
+[numthreads(8, 8, 8)]
+void main(uint3 vThreadID: SV_DispatchThreadID) {
   const float4 icb[] = { { -4.000000, -0.718548, -4.970622, 0.808913 },
                          { -4.000000, 2.081031, -3.029378, 1.191087 },
                          { -3.157377, 3.668124, -2.126200, 1.568300 },
@@ -62,6 +63,9 @@ RWTexture3D<float4> u0 : register(u0);
   r1.y = dot(float3(0.0702069029, 0.916335821, 0.0134500116), r0.xyz);
   r1.z = dot(float3(0.0206188709, 0.109567292, 0.869606733), r0.xyz);
   r0.x = dot(r1.xyz, float3(0.272228718, 0.674081743, 0.0536895171));
+
+  SetUngradedAP1(r1.xyz);
+
   r0.yzw = r1.xyz / r0.xxx;
   r0.yzw = float3(-1, -1, -1) + r0.yzw;
   r0.y = dot(r0.yzw, r0.yzw);
@@ -78,7 +82,7 @@ RWTexture3D<float4> u0 : register(u0);
   r2.z = dot(float3(-0.0257932581, -0.0986256376, 1.20369434), r1.xyz);
   r0.yzw = r2.xyz + -r1.xyz;
   r0.xyz = r0.xxx * r0.yzw + r1.xyz;
-  r0.xyz = cb0[44].yyy ? r1.xyz : r0.xyz;
+  r0.xyz = (asuint(cb0[44].y) != 0u) ? r1.xyz : r0.xyz;
   r0.w = dot(r0.xyz, float3(0.272228718, 0.674081743, 0.0536895171));
   r1.xyzw = cb0[50].xyzw * cb0[45].xyzw;
   r2.xyzw = cb0[51].xyzw * cb0[46].xyzw;
@@ -165,12 +169,13 @@ RWTexture3D<float4> u0 : register(u0);
   r0.xyz = r1.xyz * r1.www + r0.xyz;
   r0.xyz = r2.xyz * r3.yyy + r0.xyz;
 
-  float3 untonemapped_ap1 = r0.xyz;
+  SetUntonemappedAP1(r0.xyz);
 
   r1.x = dot(float3(1.70505154, -0.621790707, -0.0832583979), r0.xyz);
   r1.y = dot(float3(-0.130257145, 1.14080286, -0.0105485283), r0.xyz);
   r1.z = dot(float3(-0.0240032747, -0.128968775, 1.15297174), r0.xyz);
-  if (cb0[44].y != 0) {
+  [branch]
+  if (asuint(cb0[44].y) != 0) {
     r2.x = dot(r1.xyz, cb0[28].xyz);
     r2.y = dot(r1.xyz, cb0[29].xyz);
     r2.z = dot(r1.xyz, cb0[30].xyz);
@@ -195,6 +200,9 @@ RWTexture3D<float4> u0 : register(u0);
     r2.xyz = r2.xyz * cb0[30].www + r3.xyz;
     r2.xyz = r5.xyz * r4.xyz + r2.xyz;
     r2.xyz = float3(-0.00200000009, -0.00200000009, -0.00200000009) + r2.xyz;
+
+    SetTonemappedBT709(r2.xyz);
+
   } else {
     r3.x = dot(float3(0.938639402, 1.02359565e-10, 0.0613606237), r0.xyz);
     r3.y = dot(float3(8.36008554e-11, 0.830794156, 0.169205874), r0.xyz);
@@ -369,6 +377,9 @@ RWTexture3D<float4> u0 : register(u0);
     r3.x = dot(float3(1.70505154, -0.621790707, -0.0832583979), r0.xyz);
     r3.y = dot(float3(-0.130257145, 1.14080286, -0.0105485283), r0.xyz);
     r3.z = dot(float3(-0.0240032747, -0.128968775, 1.15297174), r0.xyz);
+
+    SetTonemappedBT709(r3.xyz);
+
     r2.xyz = max(float3(0, 0, 0), r3.xyz);
   }
   r0.xyz = r2.xyz * r2.xyz;
@@ -383,12 +394,13 @@ RWTexture3D<float4> u0 : register(u0);
   r2.xyz = cb0[27].yyy * r2.xyz;
   r3.xyz = exp2(r2.xyz);
 
-  if (injectedData.toneMapType != 0) {
-    u0[vThreadID.xyz] = LutBuilderToneMap(untonemapped_ap1, r3.xyz);
+  if (RENODX_TONE_MAP_TYPE != 0) {
+    u0[vThreadID.xyz] = GenerateOutput(r3.xyz, asuint(cb0[65].z));
     return;
   }
 
-  if (cb0[65].z == 0) {
+  [branch]
+  if (asuint(cb0[65].z) == 0) {
     r4.xyz = float3(12.9200001, 12.9200001, 12.9200001) * r3.xyz;
     r5.xyz = cmp(r3.xyz >= float3(0.00313066994, 0.00313066994, 0.00313066994));
     r2.xyz = float3(0.416666657, 0.416666657, 0.416666657) * r2.xyz;
@@ -1385,6 +1397,8 @@ RWTexture3D<float4> u0 : register(u0);
   }
   r0.xyz = float3(0.952381015, 0.952381015, 0.952381015) * r2.xyz;
   r0.w = 0;
+
+  r0 = saturate(r0);
 
   u0[vThreadID.xyz] = r0;
   return;

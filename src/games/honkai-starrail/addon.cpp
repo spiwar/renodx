@@ -21,9 +21,11 @@
 namespace {
 
 renodx::mods::shader::CustomShaders custom_shaders = {
-    CustomShaderEntry(0x3918E9B9),
-    CustomShaderEntry(0x127C5F55),
-    CustomShaderEntry(0x947F3706)
+    CustomShaderEntry(0x85C7A26F),
+    CustomShaderEntry(0x9667FE5E),
+    CustomShaderEntry(0x58B6C388),
+    CustomShaderEntry(0x5B35A377),
+    CustomShaderEntry(0x68459CE7),
 };
 
 ShaderInjectData shader_injection;
@@ -76,6 +78,17 @@ renodx::utils::settings::Settings settings = {
         .tint = 0x927A13,
         .min = 48.f,
         .max = 500.f,
+    },
+    new renodx::utils::settings::Setting{
+        .key = "toneMapHueCorrection",
+        .binding = &shader_injection.toneMapHueCorrection,
+        .default_value = 50.f,
+        .label = "Hue Correction",
+        .section = "Tone Mapping",
+        .tooltip = "Emulates hue shifting from the vanilla tonemapper",
+        .max = 100.f,
+        .is_enabled = []() { return shader_injection.toneMapType == 3; },
+        .parse = [](float value) { return value * 0.01f; },
     },
     new renodx::utils::settings::Setting{
         .key = "colorGradeExposure",
@@ -145,14 +158,18 @@ renodx::utils::settings::Settings settings = {
         .section = "About",
     },
     new renodx::utils::settings::Setting{
+        .value_type = renodx::utils::settings::SettingValueType::TEXT,
+        .label = "Note: Changes to the Tonemapping/Color Grading sections may require a game reboot to apply!",
+        .section = "About",
+    },
+    new renodx::utils::settings::Setting{
         .value_type = renodx::utils::settings::SettingValueType::BUTTON,
         .label = "HDR Den Discord",
         .section = "About",
         .group = "button-line-1",
         .tint = 0x5865F2,
         .on_change = []() {
-          static const std::string obfuscated_link = std::string("start https://discord.gg/XUhv") + std::string("tR54yc");
-          system(obfuscated_link.c_str());
+          renodx::utils::platform::LaunchURL("https://discord.gg/XUhv", "tR54yc");
         },
     },
     new renodx::utils::settings::Setting{
@@ -161,7 +178,7 @@ renodx::utils::settings::Settings settings = {
         .section = "About",
         .group = "button-line-1",
         .on_change = []() {
-          ShellExecute(0, "open", "https://github.com/clshortfuse/renodx", 0, 0, SW_SHOW);
+          renodx::utils::platform::LaunchURL("https://github.com/clshortfuse/renodx");
         },
     },
     new renodx::utils::settings::Setting{
@@ -171,7 +188,7 @@ renodx::utils::settings::Settings settings = {
         .group = "button-line-1",
         .tint = 0xFF5F5F,
         .on_change = []() {
-          ShellExecute(0, "open", "https://ko-fi.com/shortfuse", 0, 0, SW_SHOW);
+          renodx::utils::platform::LaunchURL("https://ko-fi.com/shortfuse");
         },
     },
     new renodx::utils::settings::Setting{
@@ -181,7 +198,7 @@ renodx::utils::settings::Settings settings = {
         .group = "button-line-1",
         .tint = 0xFF5F5F,
         .on_change = []() {
-          ShellExecute(0, "open", "https://ko-fi.com/hdrden", 0, 0, SW_SHOW);
+          renodx::utils::platform::LaunchURL("https://ko-fi.com/hdrden");
         },
     },
     new renodx::utils::settings::Setting{
@@ -196,6 +213,7 @@ void OnPresetOff() {
   renodx::utils::settings::UpdateSetting("toneMapPeakNits", 203.f);
   renodx::utils::settings::UpdateSetting("toneMapGameNits", 203.f);
   renodx::utils::settings::UpdateSetting("toneMapUINits", 203.f);
+  renodx::utils::settings::UpdateSetting("toneMapHueCorrection", 0.f);
   renodx::utils::settings::UpdateSetting("colorGradeExposure", 1.f);
   renodx::utils::settings::UpdateSetting("colorGradeHighlights", 50.f);
   renodx::utils::settings::UpdateSetting("colorGradeShadows", 50.f);
@@ -239,11 +257,9 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
                                                                      }});
 
       //  RGBA8_typeless
-      renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({
-          .old_format = reshade::api::format::r8g8b8a8_typeless,
-          .new_format = reshade::api::format::r16g16b16a16_typeless,
-          .aspect_ratio = renodx::mods::swapchain::SwapChainUpgradeTarget::ANY
-      });
+      renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({.old_format = reshade::api::format::r8g8b8a8_typeless,
+                                                                     .new_format = reshade::api::format::r16g16b16a16_typeless,
+                                                                     .aspect_ratio = renodx::mods::swapchain::SwapChainUpgradeTarget::ANY});
 
       break;
     case DLL_PROCESS_DETACH:

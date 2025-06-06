@@ -12,29 +12,7 @@
 
 #include <deps/imgui/imgui.h>
 
-#include <embed/0x04D8EA44.h>
-#include <embed/0x18CFEFF4.h>
-#include <embed/0x21C2AF18.h>
-#include <embed/0x298A6BB0.h>
-#include <embed/0x341CEB87.h>
-#include <embed/0x4A2023A1.h>
-#include <embed/0x4E63FBE2.h>
-#include <embed/0x5DF649A9.h>
-#include <embed/0x61DBBA5C.h>
-#include <embed/0x71F27445.h>
-#include <embed/0x745E34E1.h>
-#include <embed/0x80CEFAE4.h>
-#include <embed/0x89C4A7A4.h>
-#include <embed/0x97CA5A85.h>
-#include <embed/0xA61F2FEE.h>
-#include <embed/0xA8520658.h>
-#include <embed/0xBF8489D2.h>
-#include <embed/0xC783FBA1.h>
-#include <embed/0xC83E64DF.h>
-#include <embed/0xCBFFC2A3.h>
-#include <embed/0xDE517511.h>
-#include <embed/0xED7139C7.h>
-#include <embed/0xFBFF99B4.h>
+#include <embed/shaders.h>
 
 #include <include/reshade.hpp>
 #include "../../mods/shader.hpp"
@@ -58,11 +36,15 @@ renodx::mods::shader::CustomShaders custom_shaders = {
     CustomShaderEntry(0x745E34E1),  // tonemapper sdr lowbit
     CustomShaderEntry(0xC783FBA1),  // film grain overlay
     CustomShaderEntry(0xC83E64DF),  // hud
+    CustomShaderEntry(0x11C9D257),  // hud_221
     CustomShaderEntry(0xDE517511),  // menu
     CustomShaderEntry(0x89C4A7A4),  // new_menu
     CustomShaderEntry(0x18CFEFF4),  // new_menu_renderless
+    CustomShaderEntry(0xFDE6BBAC),  // menu_221_no_render
+    CustomShaderEntry(0xD46D9215),  // menu_221
     CustomShaderEntry(0xFBFF99B4),  // new_hud
     CustomShaderEntry(0x80CEFAE4),  // film_grain_new
+    CustomShaderEntry(0xE87F9B2E),  // film_grain_221
     CustomShaderEntry(0x21C2AF18),  // composite2
     CustomShaderEntry(0xA8520658),  // composite2_array_multisample
     CustomShaderEntry(0x04D8EA44),  // composite2_array_multisample_blend_rtv1
@@ -75,10 +57,6 @@ renodx::mods::shader::CustomShaders custom_shaders = {
 ShaderInjectData shader_injection;
 
 auto last_is_hdr = false;
-
-float ComputeReferenceWhite(float peak_nits) {
-  return std::clamp(roundf(powf(10.f, 0.03460730900256f + (0.757737096673107f * log10f(peak_nits)))), 100.f, 300.f);
-}
 
 renodx::utils::settings::Settings settings = {
     new renodx::utils::settings::Setting{
@@ -146,6 +124,17 @@ renodx::utils::settings::Settings settings = {
         .labels = {"OKLab", "ICtCp"},
     },
     new renodx::utils::settings::Setting{
+        .key = "ToneMapPerChannel",
+        .binding = &shader_injection.toneMapPerChannel,
+        .value_type = renodx::utils::settings::SettingValueType::INTEGER,
+        .default_value = 0.f,
+        .label = "Per Channel",
+        .section = "Tone Mapping",
+        .tooltip = "Applies tonemapping per-channel instead of by luminance",
+        .labels = {"Off", "On"},
+        .is_enabled = []() { return shader_injection.toneMapType == 3; },
+    },
+    new renodx::utils::settings::Setting{
         .key = "colorGradeExposure",
         .binding = &shader_injection.colorGradeExposure,
         .default_value = 1.f,
@@ -188,6 +177,17 @@ renodx::utils::settings::Settings settings = {
         .label = "Saturation",
         .section = "Color Grading",
         .max = 100.f,
+        .parse = [](float value) { return value * 0.02f; },
+    },
+    new renodx::utils::settings::Setting{
+        .key = "colorGradeHighlightSaturation",
+        .binding = &shader_injection.colorGradeHighlightSaturation,
+        .default_value = 50.f,
+        .label = "Highlight Saturation",
+        .section = "Color Grading",
+        .tooltip = "Adds or removes highlight color.",
+        .max = 100.f,
+        .is_enabled = []() { return shader_injection.toneMapType == 3; },
         .parse = [](float value) { return value * 0.02f; },
     },
     new renodx::utils::settings::Setting{
@@ -364,24 +364,6 @@ renodx::utils::settings::Settings settings = {
         .parse = [](float value) { return value - 1.f; },
     },
     new renodx::utils::settings::Setting{
-        .key = "processingGlobalGain",
-        .binding = &shader_injection.processingGlobalGain,
-        .default_value = 50.f,
-        .label = "Global Gain",
-        .section = "Processing",
-        .max = 100.f,
-        .parse = [](float value) { return value * 0.02f; },
-    },
-    new renodx::utils::settings::Setting{
-        .key = "processingGlobalLift",
-        .binding = &shader_injection.processingGlobalLift,
-        .default_value = 0.f,
-        .label = "Global Lift",
-        .section = "Processing",
-        .max = 100.f,
-        .parse = [](float value) { return value * 0.02f; },
-    },
-    new renodx::utils::settings::Setting{
         .key = "processingInternalSampling",
         .binding = &shader_injection.processingInternalSampling,
         .value_type = renodx::utils::settings::SettingValueType::INTEGER,
@@ -442,7 +424,7 @@ void OnPresetOff() {
   renodx::utils::settings::UpdateSetting("processingInternalSampling", 0.f);
 }
 
-void OnInitSwapchain(reshade::api::swapchain* swapchain) {
+void OnInitSwapchain(reshade::api::swapchain* swapchain, bool resize) {
   last_is_hdr = renodx::utils::swapchain::IsHDRColorSpace(swapchain);
   if (!last_is_hdr) {
     settings[1]->default_value = 80.f;
@@ -461,7 +443,7 @@ void OnInitSwapchain(reshade::api::swapchain* swapchain) {
     settings[1]->default_value = 1000.f;
   }
 
-  settings[2]->default_value = ComputeReferenceWhite(settings[1]->default_value);
+  settings[2]->default_value = renodx::utils::swapchain::ComputeReferenceWhite(settings[1]->default_value);
 }
 
 }  // namespace

@@ -363,6 +363,9 @@ float4 main(
   float _127 = mad(_118, _106, _126);
   float _128 = mad(_119, _107, _127);
   float _129 = dot(float3(_122, _125, _128), float3(0.2722287178039551f, 0.6740817427635193f, 0.053689517080783844f));
+
+  SetUngradedAP1(float3(_122, _125, _128));
+
   float _130 = _122 / _129;
   float _131 = _125 / _129;
   float _132 = _128 / _129;
@@ -767,7 +770,7 @@ float4 main(
   float _556 = mad(_547, _535, _555);
   float _557 = _RootShaderParameters_036y;
 
-  float3 untonemapped_ap1 = float3(_531, _533, _535);  // CustomEdit
+  SetUntonemappedAP1(float3(_531, _533, _535));  // CustomEdit
 
   float _558 = _531 * 0.9386394023895264f;
   float _559 = mad(-4.540197551250458e-09f, _533, _558);
@@ -1129,6 +1132,9 @@ float4 main(
   float _902 = _545 * _893;
   float _903 = mad(_546, _894, _902);
   float _904 = mad(_547, _895, _903);
+
+  SetTonemappedBT709(_898, _901, _904);
+
   float _905 = max(0.0f, _898);
   float _906 = max(0.0f, _901);
   float _907 = max(0.0f, _904);
@@ -1308,8 +1314,8 @@ float4 main(
   float _1076 = exp2(_1073);
 
   // CustomEdit
-  if (injectedData.toneMapType != 0) {
-    return LutBuilderToneMap(untonemapped_ap1, float3(_1074, _1075, _1076));
+  if (RENODX_TONE_MAP_TYPE != 0) {
+    return GenerateOutput(float3(_1074, _1075, _1076), _RootShaderParameters_040w);
   }
 
   uint _1078 = _RootShaderParameters_040w;

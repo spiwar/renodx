@@ -203,8 +203,7 @@ renodx::utils::settings::Settings settings = {
         .group = "button-line-1",
         .tint = 0x5865F2,
         .on_change = []() {
-          static const std::string obfuscated_link = std::string("start https://discord.gg/XUhv") + std::string("tR54yc");
-          system(obfuscated_link.c_str());
+          renodx::utils::platform::LaunchURL("https://discord.gg/XUhv", "tR54yc");
         },
     },
     new renodx::utils::settings::Setting{
@@ -213,7 +212,7 @@ renodx::utils::settings::Settings settings = {
         .section = "About",
         .group = "button-line-1",
         .on_change = []() {
-          ShellExecute(0, "open", "https://github.com/clshortfuse/renodx", 0, 0, SW_SHOW);
+          renodx::utils::platform::LaunchURL("https://github.com/clshortfuse/renodx");
         },
     },
     new renodx::utils::settings::Setting{
@@ -223,7 +222,7 @@ renodx::utils::settings::Settings settings = {
         .group = "button-line-1",
         .tint = 0xFF5F5F,
         .on_change = []() {
-          ShellExecute(0, "open", "https://ko-fi.com/shortfuse", 0, 0, SW_SHOW);
+          renodx::utils::platform::LaunchURL("https://ko-fi.com/shortfuse");
         },
     },
     new renodx::utils::settings::Setting{
@@ -233,7 +232,7 @@ renodx::utils::settings::Settings settings = {
         .group = "button-line-1",
         .tint = 0xFF5F5F,
         .on_change = []() {
-          ShellExecute(0, "open", "https://ko-fi.com/hdrden", 0, 0, SW_SHOW);
+          renodx::utils::platform::LaunchURL("https://ko-fi.com/hdrden");
         },
     },
     new renodx::utils::settings::Setting{
@@ -260,7 +259,7 @@ void OnPresetOff() {
 
 bool fired_on_init_swapchain = false;
 
-void OnInitSwapchain(reshade::api::swapchain* swapchain) {
+void OnInitSwapchain(reshade::api::swapchain* swapchain, bool resize) {
   if (fired_on_init_swapchain) return;
   fired_on_init_swapchain = true;
   auto peak = renodx::utils::swapchain::GetPeakNits(swapchain);

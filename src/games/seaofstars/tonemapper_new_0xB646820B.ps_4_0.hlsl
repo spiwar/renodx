@@ -16,7 +16,10 @@ cbuffer cb0 : register(b0) {
 // 3Dmigoto declarations
 #define cmp -
 
-void main(float4 v0: SV_POSITION0, float2 v1: TEXCOORD0, out float4 o0: SV_Target0) {
+void main(
+    float4 v0: SV_POSITION0,
+    float2 v1: TEXCOORD0,
+    out float4 o0: SV_Target0) {
   float4 r0, r1, r2, r3, r4, r5;
   uint4 bitmask, uiDest;
   float4 fDest;

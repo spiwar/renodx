@@ -5,6 +5,7 @@
 #include "./colorcorrect.hlsl"
 #include "./colorgrade.hlsl"
 #include "./lut.hlsl"
+#include "./reinhard.hlsl"
 #include "./reno_drt.hlsl"
 
 namespace renodx {
@@ -27,32 +28,6 @@ float SmoothClamp(float x) {
   const float u = 0.525;
   float q = (2.0 - u - 1.0 / u + x * (2.0 + 2.0 / u - x / u)) / 4.0;
   return (abs(1.0 - x) < u) ? q : saturate(x);
-}
-
-float3 Reinhard(float x) {
-  return x / (1.0f + x);
-}
-
-float3 Reinhard(float3 color) {
-  return color / (1.0f + color);
-}
-
-float3 ReinhardExtended(float3 color, float max_white = 1000.f / 203.f) {
-  return (color * (1.0f + (color / (max_white * max_white))))
-         / (1.0f + color);
-}
-
-float ReinhardScalable(float x, float x_max = 1.f, float x_min = 0.f, float gray_in = 0.18f, float gray_out = 0.18f) {
-  float exposure = (x_max * (x_min * gray_out + x_min - gray_out))
-                   / (gray_in * (gray_out - x_max));
-  return mad(x, exposure, x_min) / mad(x, exposure / x_max, 1.f - x_min);
-}
-
-// https://www.desmos.com/calculator/8msg0yhgfp
-float3 ReinhardScalable(float3 color, float channel_max = 1.f, float channel_min = 0.f, float gray_in = 0.18f, float gray_out = 0.18f) {
-  float exposure = (channel_max * (channel_min * gray_out + channel_min - gray_out))
-                   / (gray_in * (gray_out - channel_max));
-  return mad(color, exposure, channel_min) / mad(color, exposure / channel_max, 1.f - channel_min);
 }
 
 /// Piecewise linear + exponential compression to a target value starting from a specified number.
@@ -224,31 +199,40 @@ struct Config {
   float reno_drt_blowout;
   float reno_drt_clamp_color_space;
   float reno_drt_clamp_peak;
+  float reno_drt_white_clip;
 };
 
-float3 UpgradeToneMap(float3 color_hdr, float3 color_sdr, float3 post_process_color, float post_process_strength) {
+float3 UpgradeToneMap(
+    float3 color_untonemapped,
+    float3 color_tonemapped,
+    float3 color_tonemapped_graded,
+    float post_process_strength = 1.f,
+    float auto_correction = 0.f) {
   float ratio = 1.f;
 
-  float y_hdr = renodx::color::y::from::BT709(abs(color_hdr));
-  float y_sdr = renodx::color::y::from::BT709(abs(color_sdr));
-  float y_post_process = renodx::color::y::from::BT709(abs(post_process_color));
+  float y_untonemapped = renodx::color::y::from::BT709(abs(color_untonemapped));
+  float y_tonemapped = renodx::color::y::from::BT709(abs(color_tonemapped));
+  float y_tonemapped_graded = renodx::color::y::from::BT709(abs(color_tonemapped_graded));
 
-  if (y_hdr < y_sdr) {
+  if (y_untonemapped < y_tonemapped) {
     // If substracting (user contrast or paperwhite) scale down instead
     // Should only apply on mismatched HDR
-    ratio = y_hdr / y_sdr;
+    ratio = y_untonemapped / y_tonemapped;
   } else {
-    float y_delta = y_hdr - y_sdr;
+    float y_delta = y_untonemapped - y_tonemapped;
     y_delta = max(0, y_delta);  // Cleans up NaN
-    const float y_new = y_post_process + y_delta;
+    const float y_new = y_tonemapped_graded + y_delta;
 
-    const bool y_valid = (y_post_process > 0);  // Cleans up NaN and ignore black
-    ratio = y_valid ? (y_new / y_post_process) : 0;
+    const bool y_valid = (y_tonemapped_graded > 0);  // Cleans up NaN and ignore black
+    ratio = y_valid ? (y_new / y_tonemapped_graded) : 0;
   }
+  float auto_correct_ratio = lerp(1.f, ratio, saturate(y_untonemapped));
+  ratio = lerp(ratio, auto_correct_ratio, auto_correction);
 
-  float3 color_scaled = post_process_color * ratio;
-  color_scaled = renodx::color::correct::Hue(color_scaled, post_process_color);
-  return lerp(color_hdr, color_scaled, post_process_strength);
+  float3 color_scaled = color_tonemapped_graded * ratio;
+  // Match hue
+  color_scaled = renodx::color::correct::Hue(color_scaled, color_tonemapped_graded);
+  return lerp(color_untonemapped, color_scaled, post_process_strength);
 }
 
 namespace config {
@@ -292,7 +276,8 @@ Config Create(
     bool reno_drt_per_channel = false,
     float reno_drt_blowout = 0,
     float reno_drt_clamp_color_space = 2.f,
-    float reno_drt_clamp_peak = 1.f) {
+    float reno_drt_clamp_peak = 1.f,
+    float reno_drt_white_clip = 100.f) {
   const Config tm_config = {
     type,
     peak_nits,
@@ -320,7 +305,8 @@ Config Create(
     reno_drt_per_channel,
     reno_drt_blowout,
     reno_drt_clamp_color_space,
-    reno_drt_clamp_peak
+    reno_drt_clamp_peak,
+    reno_drt_white_clip
   };
   return tm_config;
 }
@@ -364,6 +350,7 @@ float3 ApplyRenoDRT(float3 color, Config tm_config) {
   reno_drt_config.blowout = tm_config.reno_drt_blowout;
   reno_drt_config.clamp_color_space = tm_config.reno_drt_clamp_color_space;
   reno_drt_config.clamp_peak = tm_config.reno_drt_clamp_peak;
+  reno_drt_config.white_clip = tm_config.reno_drt_white_clip;
 
   return renodrt::BT709(color, reno_drt_config);
 }

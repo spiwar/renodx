@@ -24,6 +24,45 @@ namespace {
 
 ShaderInjectData shader_injection;
 
+#define UpgradeRTVReplaceShader(value)       \
+  {                                          \
+      value,                                 \
+      {                                      \
+          .crc32 = value,                    \
+          .code = __##value,                 \
+          .on_draw = [](auto* cmd_list) {                                                             \
+            auto rtvs = renodx::utils::swapchain::GetRenderTargets(cmd_list);                         \
+            bool changed = false;                                                                     \
+            for (auto rtv : rtvs) {                                                                   \
+              changed = renodx::mods::swapchain::ActivateCloneHotSwap(cmd_list->get_device(), rtv);   \
+            }                                                                                         \
+            if (changed) {                                                                            \
+              renodx::mods::swapchain::FlushDescriptors(cmd_list);                                    \
+              renodx::mods::swapchain::RewriteRenderTargets(cmd_list, rtvs.size(), rtvs.data(), {0}); \
+            }                                                                                         \
+            return true; }, \
+      },                                     \
+  }
+
+#define UpgradeRTVShader(value)              \
+  {                                          \
+      value,                                 \
+      {                                      \
+          .crc32 = value,                    \
+          .on_draw = [](auto* cmd_list) {                                                           \
+            auto rtvs = renodx::utils::swapchain::GetRenderTargets(cmd_list);                       \
+            bool changed = false;                                                                   \
+            for (auto rtv : rtvs) {                                                                 \
+              changed = renodx::mods::swapchain::ActivateCloneHotSwap(cmd_list->get_device(), rtv); \
+            }                                                                                       \
+            if (changed) {                                                                          \
+              renodx::mods::swapchain::FlushDescriptors(cmd_list);                                  \
+              renodx::mods::swapchain::RewriteRenderTargets(cmd_list, rtvs.size(), rtvs.data(), {0});      \
+            }                                                                                       \
+            return true; }, \
+      },                                     \
+  }
+
 renodx::mods::shader::CustomShaders custom_shaders = {
     {
         0x72F0AA7C,
@@ -47,31 +86,34 @@ renodx::mods::shader::CustomShaders custom_shaders = {
             },
         },
     },
-    CustomShaderEntry(0x36211827),  // bloom
-    CustomShaderEntry(0xD598975C),  // fmv
-    CustomShaderEntry(0x3F2C7CB9),  // lens flare
-    CustomShaderEntry(0xC8BBED05),  // object dof
-    CustomShaderEntry(0xB5841644),  // reinhard
-    CustomShaderEntry(0xBB85386D),  // survival instinct
-    CustomShaderEntry(0x8B7F1649),  // upscaler
-    CustomShaderEntry(0x48648857),  // vignette/noise
-    {
-        0xF31E4052,
-        {
-            .crc32 = 0xF31E4052,
-            .on_draw = [](auto* cmd_list) {
-              auto rtvs = renodx::utils::swapchain::GetRenderTargets(cmd_list);
-              bool changed = false;
-              for (auto rtv : rtvs) {
-                changed = renodx::mods::swapchain::ActivateCloneHotSwap(cmd_list->get_device(), rtv);
-              }
-              if (changed) {
-                renodx::mods::swapchain::FlushDescriptors(cmd_list);
-              }
-              return true;
-            },
-        },
-    },
+    CustomShaderEntry(0x36211827),        // bloom
+    CustomShaderEntry(0xD598975C),        // fmv
+    CustomShaderEntry(0x3F2C7CB9),        // lens flare
+    CustomShaderEntry(0xC8BBED05),        // object dof
+    CustomShaderEntry(0xB5841644),        // reinhard
+    CustomShaderEntry(0xBB85386D),        // survival instinct
+    CustomShaderEntry(0x8B7F1649),        // upscaler
+    CustomShaderEntry(0x48648857),        // vignette/noise
+    CustomShaderEntry(0x19369325),        // surface reflections
+    UpgradeRTVReplaceShader(0x100EC9DC),  // a0
+    CustomShaderEntry(0xEA376B10),        // a10
+    CustomShaderEntry(0x36C11C54),        // a1
+    CustomShaderEntry(0x4B8C2D9F),        // a2
+    CustomShaderEntry(0x55A5D3AF),        // a3
+    CustomShaderEntry(0xA5E5BCB4),        // a4
+    CustomShaderEntry(0xB4B7BCEB),        // a5
+    CustomShaderEntry(0xB6DD6E36),        // a6
+    UpgradeRTVReplaceShader(0xCDD02564),  // a7
+    CustomShaderEntry(0xDA1F0E89),        // a8
+    CustomShaderEntry(0xE3C8625C),        // a9
+    // CustomShaderEntry(0x88472F82),
+    UpgradeRTVReplaceShader(0xA8D8F5E7),  // downsample1
+    UpgradeRTVReplaceShader(0x3B23A71A),  // downsample2
+    UpgradeRTVReplaceShader(0x48180F61),  // downsample3
+    // CustomShaderEntry(0x4E5704D4),
+    UpgradeRTVReplaceShader(0xF31E4052),  // sampling
+    UpgradeRTVReplaceShader(0x17AC3D94),  // upscale
+                                          // CustomShaderEntry(0x32CB17F7),
 };
 
 const std::unordered_map<std::string, float> HDR_LOOK_VALUES = {
@@ -287,7 +329,7 @@ renodx::utils::settings::Settings settings = {
         .tooltip = "Flare/Glare Compensation",
         .max = 100.f,
         .is_enabled = []() { return RENODX_TONE_MAP_TYPE == 3; },
-        .parse = [](float value) { return value * 0.02f; },
+        .parse = [](float value) { return value * 0.01f; },
     },
     new renodx::utils::settings::Setting{
         .key = "FxHDRVideos",
@@ -299,19 +341,19 @@ renodx::utils::settings::Settings settings = {
         .labels = {"Off", "On"},
     },
     new renodx::utils::settings::Setting{
-        .key = "FxBloom",
-        .binding = &CUSTOM_BLOOM,
+        .key = "FxLensFlare",
+        .binding = &CUSTOM_LENS_FLARE,
         .default_value = 50.f,
-        .label = "Bloom",
+        .label = "Lens Flare",
         .section = "Effects",
         .max = 100.f,
         .parse = [](float value) { return value * 0.02f; },
     },
     new renodx::utils::settings::Setting{
-        .key = "FxLensFlare",
-        .binding = &CUSTOM_LENS_FLARE,
+        .key = "FxBloom",
+        .binding = &CUSTOM_BLOOM,
         .default_value = 50.f,
-        .label = "Lens Flare",
+        .label = "Bloom",
         .section = "Effects",
         .max = 100.f,
         .parse = [](float value) { return value * 0.02f; },
@@ -325,7 +367,6 @@ renodx::utils::settings::Settings settings = {
         .max = 100.f,
         .parse = [](float value) { return value * 0.02f; },
     },
-
     new renodx::utils::settings::Setting{
         .key = "FxFilmGrainType",
         .binding = &CUSTOM_FILM_GRAIN_TYPE,
@@ -409,9 +450,7 @@ renodx::utils::settings::Settings settings = {
         .group = "button-line-2",
         .tint = 0x5865F2,
         .on_change = []() {
-          renodx::utils::platform::Launch(
-              "https://discord.gg/"
-              "5WZXDpmbpP");
+          renodx::utils::platform::LaunchURL("https://discord.gg/", "5WZXDpmbpP");
         },
     },
     new renodx::utils::settings::Setting{
@@ -420,7 +459,7 @@ renodx::utils::settings::Settings settings = {
         .section = "Options",
         .group = "button-line-2",
         .on_change = []() {
-          renodx::utils::platform::Launch("https://github.com/clshortfuse/renodx");
+          renodx::utils::platform::LaunchURL("https://github.com/clshortfuse/renodx");
         },
     },
 };
@@ -442,21 +481,22 @@ void OnPresetOff() {
   renodx::utils::settings::UpdateSetting("ColorGradeContrast", 50.f);
   renodx::utils::settings::UpdateSetting("ColorGradeSaturation", 50.f);
   renodx::utils::settings::UpdateSetting("ColorGradeHighlightSaturation", 50.f);
-  renodx::utils::settings::UpdateSetting("ColorGradeBlowout", 50.f);
-  renodx::utils::settings::UpdateSetting("ColorGradeFlare", 50.f);
+  renodx::utils::settings::UpdateSetting("ColorGradeBlowout", 0.f);
+  renodx::utils::settings::UpdateSetting("ColorGradeFlare", 0.f);
   renodx::utils::settings::UpdateSetting("FxHDRVideos", 0.f);
+  renodx::utils::settings::UpdateSetting("FxLensFlare", 50.f);
   renodx::utils::settings::UpdateSetting("FxBloom", 50.f);
   renodx::utils::settings::UpdateSetting("FxVignette", 50.f);
-  renodx::utils::settings::UpdateSetting("FxFXAA", 100.f);
-  renodx::utils::settings::UpdateSetting("FxDoF", 100.f);
   renodx::utils::settings::UpdateSetting("FxFilmGrainType", 0.f);
   renodx::utils::settings::UpdateSetting("FxFilmGrainStrength", 50.f);
+  renodx::utils::settings::UpdateSetting("FxFXAA", 100.f);
+  renodx::utils::settings::UpdateSetting("FxDoF", 100.f);
   renodx::utils::settings::UpdateSetting("FxScanLines", 100.f);
 }
 
 bool fired_on_init_swapchain = false;
 
-void OnInitSwapchain(reshade::api::swapchain* swapchain) {
+void OnInitSwapchain(reshade::api::swapchain* swapchain, bool resize) {
   if (fired_on_init_swapchain) return;
   fired_on_init_swapchain = true;
 
@@ -466,7 +506,7 @@ void OnInitSwapchain(reshade::api::swapchain* swapchain) {
     peak = 1000.f;
   }
   settings[2]->default_value = peak.value();
-  settings[3]->default_value = std::clamp(roundf(powf(10.f, 0.03460730900256f + (0.757737096673107f * log10f(peak.value())))), 100.f, 300.f);
+  settings[3]->default_value = renodx::utils::swapchain::ComputeReferenceWhite(peak.value());
 }
 
 std::mt19937 random_generator(std::chrono::system_clock::now().time_since_epoch().count());
@@ -488,7 +528,7 @@ bool initialized = false;
 }  // namespace
 
 extern "C" __declspec(dllexport) constexpr const char* NAME = "RenoDX";
-extern "C" __declspec(dllexport) constexpr const char* DESCRIPTION = "RenoDX for Rise of the Tomb Raider";
+extern "C" __declspec(dllexport) constexpr const char* DESCRIPTION = "RenoDX for Tomb Raider (2013)";
 
 BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
   switch (fdw_reason) {
@@ -501,26 +541,16 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
       renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({
           .old_format = reshade::api::format::r16g16b16a16_unorm,
           .new_format = reshade::api::format::r16g16b16a16_float,
-          // .aspect_ratio = renodx::mods::swapchain::SwapChainUpgradeTarget::BACK_BUFFER,
-          // .usage_include = reshade::api::resource_usage::render_target | reshade::api::resource_usage::unordered_access,
       });
 
-      renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({
-          .old_format = reshade::api::format::r8g8b8a8_unorm,
-          .new_format = reshade::api::format::r16g16b16a16_float,
-          // .aspect_ratio = renodx::mods::swapchain::SwapChainUpgradeTarget::BACK_BUFFER,
-          .usage_include = reshade::api::resource_usage::render_target,
-      });
-
-      // On Demand upgrades for depth of field
+      // On Demand upgrades
       renodx::mods::swapchain::use_resource_cloning = true;
       renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({
           .old_format = reshade::api::format::r8g8b8a8_unorm,
           .new_format = reshade::api::format::r16g16b16a16_float,
+          .ignore_size = true,
           .use_resource_view_cloning = true,
           .use_resource_view_hot_swap = true,
-          .aspect_ratio = renodx::mods::swapchain::SwapChainUpgradeTarget::BACK_BUFFER,
-          .usage_include = reshade::api::resource_usage::render_target | reshade::api::resource_usage::unordered_access,
       });
 
       reshade::register_event<reshade::addon_event::init_swapchain>(OnInitSwapchain);

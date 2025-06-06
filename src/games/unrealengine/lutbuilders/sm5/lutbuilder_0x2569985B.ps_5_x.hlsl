@@ -164,7 +164,7 @@ void main(
   r0.xyz = r5.xyz * r4.www + r0.xyz;
 
   // CustomEdit
-  float3 untonemapped_ap1 = r0.xyz;
+  SetUntonemappedAP1(r0.xyz);
 
   // Blue correct
   r1.x = dot(float3(0.938639402, 1.02359565e-10, 0.0613606237), r0.xyz);
@@ -352,6 +352,8 @@ void main(
   r5.xyz = r5.xyz + -r1.xyz;
   r1.xyz = cb0[36].yyy * r5.xyz + r1.xyz;
 
+  SetTonemappedAP1(r1.xyz);
+
   r5.x = dot(cb1[12].xyz, r1.xyz);
   r5.y = dot(cb1[13].xyz, r1.xyz);
   r5.z = dot(cb1[14].xyz, r1.xyz);
@@ -369,19 +371,20 @@ void main(
   r5.xyz = exp2(r5.xyz);
 
   // CustomEdit
-  if (injectedData.toneMapType != 0) {
-    o0 = LutBuilderToneMap(untonemapped_ap1, r5.xyz);
+  if (RENODX_TONE_MAP_TYPE != 0) {
+    o0 = GenerateOutput(r5.xyz, asuint(cb0[40].w));
     return;
   }
 
-  if (cb0[40].w == 0) {  // cb[40].w = output device
+  [branch]
+  if (asuint(cb0[40].w) == 0) {  // cb[40].w = output device
     r6.x = dot(cb1[8].xyz, r5.xyz);
     r6.y = dot(cb1[9].xyz, r5.xyz);
     r6.z = dot(cb1[10].xyz, r5.xyz);
     r7.x = dot(r3.xyz, r6.xyz);
     r7.y = dot(r4.xyz, r6.xyz);
     r7.z = dot(r2.xyz, r6.xyz);
-    r6.xyz = cb1[20].xxx ? r5.xyz : r7.xyz;
+    r6.xyz = (asuint(cb1[20].x) != 0u) ? r5.xyz : r7.xyz;
     r7.xyz = float3(12.9200001, 12.9200001, 12.9200001) * r6.xyz;
     r8.xyz = cmp(r6.xyz >= float3(0.00313066994, 0.00313066994, 0.00313066994));
     r6.xyz = log2(r6.xyz);
@@ -1345,5 +1348,7 @@ void main(
 
   o0.xyz = float3(0.952381015, 0.952381015, 0.952381015) * r6.xyz;
   o0.w = 0;
+
+  o0 = saturate(o0);
   return;
 }

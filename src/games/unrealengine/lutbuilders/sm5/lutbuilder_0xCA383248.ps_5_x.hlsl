@@ -147,7 +147,7 @@ void main(
   r0.xyz = r0.xyz * r2.xzw + r3.xyz;
   r0.xyz = r0.xyz * r2.yyy + r1.xyz;
 
-  float3 untonemapped_ap1 = r0.xyz;
+  SetUntonemappedAP1(r0.xyz);
 
   r1.x = dot(float3(0.938639402, 1.02359565e-10, 0.0613606237), r0.xyz);
   r1.y = dot(float3(8.36008554e-11, 0.830794156, 0.169205874), r0.xyz);
@@ -316,6 +316,9 @@ void main(
   r1.z = dot(float3(1.9865448e-08, 2.12079581e-08, 0.999999583), r0.xyz);
   r1.xyz = r1.xyz + -r0.xyz;
   r0.xyz = cb0[36].zzz * r1.xyz + r0.xyz;
+
+  SetTonemappedAP1(r0.xyz);
+  
   r1.x = saturate(dot(cb1[12].xyz, r0.xyz));
   r1.y = saturate(dot(cb1[13].xyz, r0.xyz));
   r1.z = saturate(dot(cb1[14].xyz, r0.xyz));
@@ -364,8 +367,8 @@ void main(
   r0.xyz = cb0[40].yyy * r0.xyz;
   r0.xyz = exp2(r0.xyz);
 
-  if (injectedData.toneMapType != 0) {
-    o0 = LutBuilderToneMap(untonemapped_ap1, r0.xyz);
+  if (RENODX_TONE_MAP_TYPE != 0) {
+    o0 = GenerateOutput(r0.xyz, asuint(cb0[41].x));
     return;
   }
 
@@ -388,7 +391,7 @@ void main(
   r2.yzw = r2.yyy ? float3(-0.00501335133, -0.025290072, 1.03030348) : r4.xyz;
   r2.xyz = r2.xxx ? float3(-0.00215900945, -0.0454593264, 1.04761839) : r2.yzw;
   r3.z = dot(r2.xyz, r1.xyz);
-  r0.xyz = cb1[20].xxx ? r0.xyz : r3.xyz;
+  r0.xyz = (asuint(cb1[20].x) != 0u) ? r0.xyz : r3.xyz;
   r1.xyz = float3(12.9200001, 12.9200001, 12.9200001) * r0.xyz;
   r2.xyz = cmp(r0.xyz >= float3(0.00313066994, 0.00313066994, 0.00313066994));
   r0.xyz = log2(r0.xyz);
@@ -398,5 +401,8 @@ void main(
   r0.xyz = r2.xyz ? r0.xyz : r1.xyz;
   o0.xyz = float3(0.952381015, 0.952381015, 0.952381015) * r0.xyz;
   o0.w = 0;
+
+  o0 = saturate(o0);
+
   return;
 }
