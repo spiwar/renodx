@@ -22,18 +22,18 @@
 namespace {
 
 renodx::mods::shader::CustomShaders custom_shaders = {
-    CustomShaderEntry(0xD3E07101),  // Secondary lutbuilder, seems to be used on characters.
-    CustomShaderEntry(0x59D640A3),
-    CustomShaderEntry(0x9E93A9D5),
-    CustomShaderEntry(0x1D087B15),
-    CustomShaderEntry(0x27D9678A),
-    CustomShaderEntry(0x14410F28),
-    CustomShaderEntry(0x1B51EA2B),
-    CustomShaderEntry(0xD703D3ED),
-    CustomShaderEntry(0x1A2991A9),
-    CustomShaderEntry(0x271F2807),
+    CustomShaderEntry(0x9496233C),  // Secondary lutbuilder, seems to be used on characters.
+    CustomShaderEntry(0x9E8F1321),
+    CustomShaderEntry(0xBBACCDAD),
+    CustomShaderEntry(0x2E1A6F79),
+    CustomShaderEntry(0xBB3FD02D),
+    CustomShaderEntry(0xB30C1D4B),
+    CustomShaderEntry(0xF8C68E05),
+    CustomShaderEntry(0xD889AB3A),
+    CustomShaderEntry(0xDA780F00),
+    CustomShaderEntry(0xDF092A7C),
     CustomShaderEntry(0xF7EBAAB1),
-    CustomShaderEntry(0x583025D2)};
+    CustomShaderEntry(0xE6718C61)};
 
 ShaderInjectData shader_injection;
 const std::string build_date = __DATE__;
@@ -267,17 +267,18 @@ void OnPresetOff() {
 }
 
 bool HandlePreDraw(reshade::api::command_list* cmd_list, bool is_dispatch = false) {
-  const auto& shader_state = cmd_list->get_private_data<renodx::utils::shader::CommandListData>();
+  auto* shader_state = renodx::utils::shader::GetCurrentState(cmd_list);
 
-  auto pixel_shader_hash = shader_state.GetCurrentPixelShaderHash();
-  // 0x271F2807 and 0x1D087B15 are used to unclamp the main menu.
-  // 0x59D640A3 is the first Uberpost used and it's here to unclamp the main game at 0.8 render scale
-  // 0x27D9678A is used to unclamp the character portraits
+  auto pixel_shader_hash = renodx::utils::shader::GetCurrentPixelShaderHash(shader_state);
+  // 0xDF092A7C and 0x2E1A6F79 are used to unclamp the main menu.
+  // 0x9E8F1321 is the first Uberpost used and it's here to unclamp the main game at 0.8 render scale
+  // 0xBB3FD02D is used to unclamp the character portraits
+  // 0x811A49EB is an UI shader and we use it to unclamp the dialog RTV.
 
   if (
       !is_dispatch
-      && (pixel_shader_hash == 0x59D640A3 || pixel_shader_hash == 0x1D087B15 || pixel_shader_hash == 0x271F2807
-          || pixel_shader_hash == 0x27D9678A)) {
+      && (pixel_shader_hash == 0x9E8F1321 || pixel_shader_hash == 0x2E1A6F79 || pixel_shader_hash == 0xDF092A7C
+          || pixel_shader_hash == 0xBB3FD02D || pixel_shader_hash == 0x811A49EB )) {
     auto rtvs = renodx::utils::swapchain::GetRenderTargets(cmd_list);
 
     bool changed = false;

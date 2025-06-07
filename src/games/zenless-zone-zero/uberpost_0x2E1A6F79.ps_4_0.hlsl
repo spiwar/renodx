@@ -1,7 +1,7 @@
 #include "./shared.h"
-//lacks a lut for some reason? used on the main menu.
 
-// ---- Created with 3Dmigoto v1.4.1 on Thu Jan  2 23:23:32 2025
+// lacks a lut for some reason? used on the main menu.
+// ---- Created with 3Dmigoto v1.4.1 on Fri Jun  6 06:47:32 2025
 Texture2D<float4> t4 : register(t4);
 
 Texture2D<float4> t3 : register(t3);
@@ -25,7 +25,7 @@ cbuffer cb1 : register(b1) {
 }
 
 cbuffer cb0 : register(b0) {
-  float4 cb0[134];
+  float4 cb0[138];
 }
 
 // 3Dmigoto declarations
@@ -77,7 +77,7 @@ void main(
   r2.xy = v1.xy + r2.xy;
   r4.xyzw = t0.Sample(s0_s, r2.xy).xyzw;
 
-  float3 untonemapped = r4.xyz;
+  //float3 untonemapped = r4.xyz;
 
   r2.xy = v1.xy + r2.zw;
   r1.xy = r1.xz * r1.yy + r2.xy;
@@ -91,7 +91,7 @@ void main(
   r0.w = (int)r1.z | (int)r1.x;
   r0.z = r0.z ? r0.w : 0;
   if (r0.z != 0) {
-    r0.z = cb0[133].y * r0.y;
+    r0.z = cb0[137].y * r0.y;
     r0.z = cb1[25].x * r0.z;
     r0.w = r0.z + r0.z;
     r0.w = cmp(r0.w >= -r0.w);
@@ -104,7 +104,7 @@ void main(
     r0.z = r1.w ? r0.z : r0.w;
     r0.z = r0.z * 2 + -1;
     r3.x = cb1[25].z * r0.z + r0.x;
-    r0.z = cb0[133].x * cb0[133].w;
+    r0.z = cb0[137].x * cb0[137].w;
     r0.w = abs(cb1[26].y) + r3.x;
     r1.x = cb1[26].y * r0.y;
     r0.w = r0.w * r0.z + -r1.x;
@@ -146,6 +146,8 @@ void main(
     r2.y = r1.y;
     o0.w = r3.w;
   }
+
+  // possibly vignette
   r0.z = cmp(0 < cb1[7].z);
   if (r0.z != 0) {
     r0.xy = -cb1[7].xy + r0.xy;
@@ -161,6 +163,32 @@ void main(
     r0.xyz = r0.xxx * r0.yzw + cb1[6].xyz;
     r2.xyz = r2.xyz * r0.xyz;
   }
+  float3 untonemapped = r2.xyz;
+
+  float vanillaMidGray = renodx::tonemap::unity::BT709(0.18f).x;
+
+  renodx::tonemap::Config config = renodx::tonemap::config::Create();
+  config.type = injectedData.toneMapType;
+  config.peak_nits = injectedData.toneMapPeakNits;
+  config.game_nits = injectedData.toneMapGameNits;
+  config.gamma_correction = injectedData.toneMapGammaCorrection;
+  config.exposure = injectedData.colorGradeExposure;
+  config.highlights = injectedData.colorGradeHighlights;
+  config.shadows = injectedData.colorGradeShadows;
+  config.contrast = injectedData.colorGradeContrast;
+  config.saturation = injectedData.colorGradeSaturation;
+  config.mid_gray_value = vanillaMidGray;
+  config.mid_gray_nits = vanillaMidGray * 100.f;
+  config.reno_drt_dechroma = injectedData.colorGradeBlowout;
+  config.reno_drt_flare = injectedData.colorGradeFlare;
+
+  config.hue_correction_type = renodx::tonemap::config::hue_correction_type::CUSTOM;
+  config.hue_correction_color = lerp(
+      untonemapped,
+      saturate(renodx::tonemap::unity::BT709(untonemapped)),
+      injectedData.toneMapHueCorrection);
+
+  r2.xyz = renodx::tonemap::config::Apply(untonemapped, config);
   
   r0.x = cmp(0 < cb1[13].x);
   if (r0.x != 0) {
