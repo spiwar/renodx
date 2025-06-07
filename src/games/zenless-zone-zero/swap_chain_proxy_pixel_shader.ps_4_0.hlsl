@@ -13,7 +13,10 @@ float4 main(float4 vpos: SV_POSITION, float2 uv: TEXCOORD0)
   // Always clamp to BT2020
   color.rgb = renodx::color::bt709::clamp::BT2020(color.rgb);
 
-  color.rgb *= injectedData.toneMapUINits / 80.f;
+  color *= injectedData.toneMapUINits;
+  color = min(color, injectedData.toneMapPeakNits);  // Clamp UI or Videos
+
+  color /= 80.f;
   color.a = 1.f;
   return color;
 }

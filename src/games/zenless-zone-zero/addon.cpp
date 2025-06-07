@@ -33,7 +33,15 @@ renodx::mods::shader::CustomShaders custom_shaders = {
     CustomShaderEntry(0xDA780F00),
     CustomShaderEntry(0xDF092A7C),
     CustomShaderEntry(0xF7EBAAB1),
-    CustomShaderEntry(0xE6718C61)};
+    CustomShaderEntry(0xE6718C61),
+    CustomShaderEntry(0x95144D64),
+    CustomShaderEntry(0xF666D567),
+    CustomShaderEntry(0x43AA0C3B),
+    CustomShaderEntry(0x9585D63F),
+    CustomShaderEntry(0x125B5714),
+    CustomShaderEntry(0x7FC3C83A),
+    CustomShaderEntry(0x28F74247)
+  };
 
 ShaderInjectData shader_injection;
 const std::string build_date = __DATE__;
@@ -274,11 +282,13 @@ bool HandlePreDraw(reshade::api::command_list* cmd_list, bool is_dispatch = fals
   // 0x9E8F1321 is the first Uberpost used and it's here to unclamp the main game at 0.8 render scale
   // 0xBB3FD02D is used to unclamp the character portraits
   // 0x811A49EB is an UI shader and we use it to unclamp the dialog RTV.
-
+  // 0x7FC3C83A is an Uberpost used on the Map menu screen
+  // 0x28F74247 is an Uberpost on the Agent Archives screen
   if (
       !is_dispatch
       && (pixel_shader_hash == 0x9E8F1321 || pixel_shader_hash == 0x2E1A6F79 || pixel_shader_hash == 0xDF092A7C
-          || pixel_shader_hash == 0xBB3FD02D || pixel_shader_hash == 0x811A49EB )) {
+          || pixel_shader_hash == 0xBB3FD02D || pixel_shader_hash == 0x811A49EB || pixel_shader_hash == 0x7FC3C83A
+          || pixel_shader_hash == 0x28F74247)) {
     auto rtvs = renodx::utils::swapchain::GetRenderTargets(cmd_list);
 
     bool changed = false;
