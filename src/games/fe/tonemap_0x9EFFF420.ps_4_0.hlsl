@@ -31,7 +31,7 @@ void main(
   r0.xyz = r0.yzw * r0.xxx;
   r0.xyz = cb0[3].xxx * r0.xyz;
   r0.rgb = renodx::color::bt709::clamp::BT2020(r0.gbr);
-  float midGray = renodx::color::y::from::BT709(vanillaTonemap(float3(0.18f, 0.18f, 0.18f)));
+  float midGray = vanillaTonemap(float3(0.18f, 0.18f, 0.18f)).x;
   float3 hueCorrectionColor = vanillaTonemap(r0.rgb);
   renodx::tonemap::Config config = renodx::tonemap::config::Create();
   config.type = min(3, injectedData.toneMapType);
@@ -54,7 +54,7 @@ void main(
   config.hue_correction_strength = injectedData.toneMapPerChannel != 0.f ? (1.f - injectedData.toneMapHueCorrection)
                                               : injectedData.toneMapHueCorrection;
   config.hue_correction_color = lerp(r0.rgb, hueCorrectionColor, injectedData.toneMapHueShift);
-  config.reno_drt_hue_correction_method = (uint)injectedData.toneMapHueProcessor;
+  config.reno_drt_hue_correction_method = (int)injectedData.toneMapHueProcessor;
   config.reno_drt_tone_map_method = injectedData.toneMapType == 4.f ? renodx::tonemap::renodrt::config::tone_map_method::REINHARD
                                                                     : renodx::tonemap::renodrt::config::tone_map_method::DANIELE;
   config.reno_drt_per_channel = injectedData.toneMapPerChannel != 0.f;

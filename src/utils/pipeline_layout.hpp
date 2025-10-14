@@ -6,16 +6,16 @@
 #pragma once
 
 #include <cassert>
-#include <include/reshade.hpp>
-#include <include/reshade_api_pipeline.hpp>
-#include <mutex>
+#include <cstdint>
 #include <shared_mutex>
 #include <sstream>
-#include <unordered_map>
 #include <vector>
+
+#include <include/reshade.hpp>
 
 #include "./data.hpp"
 #include "./format.hpp"
+#include "./log.hpp"
 
 namespace renodx::utils::pipeline_layout {
 
@@ -27,12 +27,12 @@ struct PipelineLayoutData {
   reshade::api::pipeline_layout replacement_layout = {0u};
   reshade::api::pipeline_layout injection_layout = {0u};
   int32_t injection_index = -1;
+  int32_t injection_register_index = -1;
   bool failed_injection = false;
 };
 
 static struct Store {
-  std::shared_mutex pipeline_layout_data_mutex;
-  std::unordered_map<uint64_t, PipelineLayoutData> pipeline_layout_data;
+  data::ParallelNodeHashMap<uint64_t, PipelineLayoutData, std::shared_mutex> pipeline_layout_data;
 } local_store;
 
 static Store* store = &local_store;
@@ -40,18 +40,22 @@ static Store* store = &local_store;
 static bool is_primary_hook = false;
 
 static PipelineLayoutData* GetPipelineLayoutData(const reshade::api::pipeline_layout& layout, bool create = false) {
-  {
-    std::shared_lock lock(store->pipeline_layout_data_mutex);
-    auto pair = store->pipeline_layout_data.find(layout.handle);
-    if (pair != store->pipeline_layout_data.end()) return &pair->second;
-    if (!create) return nullptr;
+  if (create) {
+    auto [pointer, inserted] = store->pipeline_layout_data.try_emplace_p(layout.handle, PipelineLayoutData({.layout = layout}));
+    return &pointer->second;
   }
+  PipelineLayoutData* data = nullptr;
 
-  {
-    std::unique_lock write_lock(store->pipeline_layout_data_mutex);
-    auto& info = store->pipeline_layout_data.insert({layout.handle, PipelineLayoutData({.layout = layout})}).first->second;
-    return &info;
+  store->pipeline_layout_data.if_contains(layout.handle, [&data](std::pair<const uint64_t, PipelineLayoutData>& pair) {
+    data = &pair.second;
+  });
+  if (data == nullptr) {
+    log::e("utils::pipeline_layout::GetPipelineLayout(",
+           "Pipeline layout not found: ", log::AsPtr(layout.handle),
+           ")");
+    assert(data != nullptr);
   }
+  return data;
 }
 
 struct __declspec(uuid("080a74f2-9a2a-4af6-bb2c-8d083e0a354d")) DeviceData {
@@ -63,13 +67,11 @@ static void OnInitDevice(reshade::api::device* device) {
   bool created = renodx::utils::data::CreateOrGet(device, data);
 
   if (created) {
-    std::stringstream s;
-    s << "utils::pipeline_layout::OnInitDevice(Hooking device: ";
-    s << PRINT_PTR(reinterpret_cast<uintptr_t>(device));
-    s << ", api: " << device->get_api();
-    s << ")";
-    reshade::log::message(reshade::log::level::debug, s.str().c_str());
-
+    log::d(
+        "utils::pipeline_layout::OnInitDevice(Hooking device: ",
+        log::AsPtr(device),
+        ", api: ", device->get_api(),
+        ")");
     is_primary_hook = true;
     data->store = store;
   } else {
@@ -98,6 +100,10 @@ static void OnInitPipelineLayout(
     const uint32_t param_count,
     const reshade::api::pipeline_layout_param* params,
     reshade::api::pipeline_layout layout) {
+  if (layout.handle == 0u) {
+    assert(layout.handle != 0u);
+    return;
+  }
   auto* layout_data = GetPipelineLayoutData(layout, true);
 
   layout_data->params.assign(params, params + param_count);
@@ -132,7 +138,6 @@ static void OnInitPipelineLayout(
 static void OnDestroyPipelineLayout(
     reshade::api::device* device,
     reshade::api::pipeline_layout layout) {
-  const std::unique_lock lock(store->pipeline_layout_data_mutex);
   store->pipeline_layout_data.erase(layout.handle);
 }
 
@@ -152,6 +157,8 @@ static void Use(DWORD fdw_reason) {
 
       break;
     case DLL_PROCESS_DETACH:
+      if (!attached) return;
+      attached = false;
       reshade::unregister_event<reshade::addon_event::init_device>(OnInitDevice);
       reshade::unregister_event<reshade::addon_event::destroy_device>(OnDestroyDevice);
       reshade::unregister_event<reshade::addon_event::init_pipeline_layout>(OnInitPipelineLayout);

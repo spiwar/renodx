@@ -3,8 +3,22 @@
 
 #include "./color.hlsl"
 #include "./color_convert.hlsl"
+#include "./colorgrade.hlsl"
 #include "./math.hlsl"
 #include "./reinhard.hlsl"
+#include "./tonemap/daniele.hlsl"
+
+#ifndef RENODX_RENO_DRT_NEUTRAL_SDR_CLAMP_PEAK
+#define RENODX_RENO_DRT_NEUTRAL_SDR_CLAMP_PEAK 0
+#endif
+
+#ifndef RENODX_RENO_DRT_NEUTRAL_SDR_CLAMP_COLOR_SPACE
+#define RENODX_RENO_DRT_NEUTRAL_SDR_CLAMP_COLOR_SPACE 0
+#endif
+
+#ifndef RENODX_RENO_DRT_NEUTRAL_SDR_TONE_MAP_METHOD
+#define RENODX_RENO_DRT_NEUTRAL_SDR_TONE_MAP_METHOD 0
+#endif
 
 namespace renodx {
 namespace tonemap {
@@ -23,10 +37,10 @@ struct Config {
   float flare;
   float hue_correction_strength;
   float3 hue_correction_source;
-  uint hue_correction_method;
-  uint tone_map_method;
-  uint hue_correction_type;
-  uint working_color_space;
+  int hue_correction_method;
+  int tone_map_method;
+  int hue_correction_type;
+  int working_color_space;
   bool per_channel;
   float blowout;
   float clamp_color_space;
@@ -37,19 +51,19 @@ struct Config {
 namespace config {
 
 namespace hue_correction_type {
-static const uint INPUT = 0u;
-static const uint CUSTOM = 1u;
+static const int INPUT = 0;
+static const int CUSTOM = 1;
 }
 
 namespace hue_correction_method {
-static const uint OKLAB = 0u;
-static const uint ICTCP = 1u;
-static const uint DARKTABLE_UCS = 2u;
+static const int OKLAB = 0;
+static const int ICTCP = 1;
+static const int DARKTABLE_UCS = 2;
 }
 
 namespace tone_map_method {
-static const uint DANIELE = 0u;
-static const uint REINHARD = 1u;
+static const int DANIELE = 0;
+static const int REINHARD = 1;
 }
 
 Config Create(
@@ -65,10 +79,10 @@ Config Create(
     float flare = 0.f,
     float hue_correction_strength = 1.f,
     float3 hue_correction_source = 0,
-    uint hue_correction_method = config::hue_correction_method::OKLAB,
-    uint tone_map_method = config::tone_map_method::DANIELE,
-    uint hue_correction_type = config::hue_correction_type::INPUT,
-    uint working_color_space = 0u,
+    int hue_correction_method = config::hue_correction_method::OKLAB,
+    int tone_map_method = config::tone_map_method::DANIELE,
+    int hue_correction_type = config::hue_correction_type::INPUT,
+    int working_color_space = 0,
     bool per_channel = false,
     float blowout = 0,
     float clamp_color_space = 2.f,
@@ -101,83 +115,39 @@ Config Create(
 }
 }
 
-float CustomizeLuminance(float value, float highlights = 1.f, float shadows = 1.f, float contrast = 1.f) {
-  value = value / 0.18f;
-  [branch]
-  if (highlights != 1.f) {
-    value = lerp(
-        value,
-        pow(value, highlights),
-        saturate(value));
-  }
-
-  [branch]
-  if (shadows != 1.f) {
-    value = lerp(
-        pow(value, 2.f - shadows),
-        value,
-        saturate(value));
-  }
-
-  [branch]
-  if (contrast != 1.f) {
-    value = pow(value, contrast);
-  }
-  value *= 0.18f;
-  return value;
-}
-
 float3 BT709(float3 bt709, Config current_config) {
-  const float n_r = 100.f;
-  float n = 1000.f;
+  const float reference_white = 100.f;
 
-  // drt cam
-  // n_r = 100
-  // g = 1.15
-  // c = 0.18
-  // c_d = 10.013
-  // w_g = 0.14
-  // t_1 = 0.04
-  // r_hit_min = 128
-  // r_hit_max = 896
-
-  float g = 1.1;            // gamma/contrast
-  float c = 0.18;           // scene-referred gray
-  float c_d = 10.013;       // output gray in nits
-  const float w_g = 0.00f;  // gray change
-  float t_1 = 0.01;         // shadow toe
-  const float r_hit_min = 128;
-  const float r_hit_max = 256;
-
-  float white_clip = 100.f;
-
-  g = current_config.contrast;
-  c = current_config.mid_gray_value;
-  c_d = current_config.mid_gray_nits;
-  n = current_config.nits_peak;
-  t_1 = current_config.flare;
-  white_clip = current_config.white_clip;
+  float peak = (current_config.nits_peak / reference_white);
 
   float3 input_color;
   float y_original;
 
   float current_color_space = current_config.working_color_space;
 
-  if (current_config.working_color_space == 2u) {
+  if (current_color_space == 2) {
     input_color = max(0, renodx::color::ap1::from::BT709(bt709));
     y_original = renodx::color::y::from::AP1(input_color);
-  } else if (current_config.working_color_space == 1u) {
+  } else if (current_color_space == 1) {
     input_color = renodx::color::bt2020::from::BT709(bt709);
-    y_original = renodx::color::y::from::BT2020(abs(input_color));
+    y_original = renodx::color::y::from::BT2020(input_color);
   } else {
     input_color = bt709;
-    y_original = renodx::color::y::from::BT709(abs(bt709));
+    y_original = renodx::color::y::from::BT709(bt709);
   }
 
   float y = y_original;
 
   y *= current_config.exposure;
-  y = CustomizeLuminance(y, current_config.highlights, current_config.shadows);
+  [branch]
+  if (current_config.highlights != 1.f) {
+    y = renodx::color::grade::Highlights(y, current_config.highlights, current_config.mid_gray_value);
+  }
+
+  [branch]
+  if (current_config.shadows != 1.f) {
+    y = renodx::color::grade::Shadows(y, current_config.shadows, current_config.mid_gray_value);
+  }
 
   float3 per_channel_color;
   [branch]
@@ -187,84 +157,92 @@ float3 BT709(float3 bt709, Config current_config) {
     per_channel_color = input_color;
   }
 
-  float m_0 = (n / n_r);
-
   float3 color_output;
+
   [branch]
   if (current_config.tone_map_method == config::tone_map_method::DANIELE) {
-    float m_1 = 0.5 * (m_0 + sqrt(m_0 * (m_0 + (4.0 * t_1))));
-    float r_hit = r_hit_min + ((r_hit_max - r_hit_min) * (log(m_0) / log(10000.0 / 100.0)));
+    renodx::tonemap::daniele::Config daniele_config = renodx::tonemap::daniele::config::Create();
 
-    float u = pow((r_hit / m_1) / ((r_hit / m_1) + 1.0), g);
-    const float m = m_1 / u;
-    const float w_i = log(n / 100.0) / log(2.0);
-    const float c_t = (c_d / n_r) * (1.0 + (w_i * w_g));
-    const float g_ip = 0.5 * (c_t + sqrt(c_t * (c_t + (4.0 * t_1))));
-    const float g_ipp2 = -m_1 * pow(g_ip / m, 1.0 / g) / (pow(g_ip / m, 1.0 / g) - 1.0);
-    const float w_2 = c / g_ipp2;
-    const float s_2 = w_2 * m_1;
-    float u_2 = pow((r_hit / m_1) / ((r_hit / m_1) + w_2), g);
-    float m_2 = m_1 / u_2;
+    daniele_config.n_r = reference_white;               // reference nits
+    daniele_config.n = current_config.nits_peak;        // peak nits
+    daniele_config.g = current_config.contrast;         // surround/contrast
+    daniele_config.c = current_config.mid_gray_value;   // scene-referred gray
+    daniele_config.c_d = current_config.mid_gray_nits;  // output gray in nits
+    daniele_config.w_g = 0;                             // gray change
+    daniele_config.t_1 = current_config.flare;          // shadow toe
 
     [branch]
     if (current_config.per_channel) {
-      float3 ts3 = pow(max(0, per_channel_color) / (per_channel_color + s_2), g) * m_2;
-      float3 flared3 = max(0, (ts3 * ts3) / (ts3 + t_1));
+      float3 ts3 = float3(
+          renodx::tonemap::daniele::ToneMap(per_channel_color.r, daniele_config),
+          renodx::tonemap::daniele::ToneMap(per_channel_color.g, daniele_config),
+          renodx::tonemap::daniele::ToneMap(per_channel_color.b, daniele_config));
 
-      color_output = clamp(flared3, 0, m_0);
+      color_output = clamp(ts3, 0, peak);
     } else {
-      float ts = pow(max(0, y) / (y + s_2), g) * m_2;
-      float flared = max(0, (ts * ts) / (ts + t_1));
+      float ts = renodx::tonemap::daniele::ToneMap(y, daniele_config);
 
-      float y_new = clamp(flared, 0, m_0);
+      float y_new = clamp(ts, 0, peak);
 
       color_output = input_color * (y_original > 0 ? (y_new / y_original) : 0);
     }
   } else if (current_config.tone_map_method == config::tone_map_method::REINHARD) {
-    white_clip = max(white_clip, m_0);
-    white_clip = CustomizeLuminance(white_clip, current_config.highlights, current_config.shadows, current_config.contrast);
+    float white_clip = max(current_config.white_clip, peak);
+    [branch]
+    if (current_config.highlights != 1.f) {
+      white_clip = renodx::color::grade::Highlights(white_clip, current_config.highlights, current_config.mid_gray_value);
+    }
+
+    [branch]
+    if (current_config.shadows != 1.f) {
+      white_clip = renodx::color::grade::Shadows(white_clip, current_config.shadows, current_config.mid_gray_value);
+    }
+
+    float computed_contrast = 1.f;
+    [branch]
+    if (current_config.contrast != 1.f || current_config.flare != 0.f) {
+      y /= current_config.mid_gray_value;
+      float computed_flare = renodx::math::DivideSafe(y + current_config.flare, y, 1.f);
+      computed_flare = lerp(computed_flare, 1.f, saturate(y));
+      y *= current_config.mid_gray_value;
+      computed_contrast = current_config.contrast * computed_flare;
+
+      white_clip = renodx::color::grade::Contrast(white_clip, current_config.contrast, current_config.mid_gray_value);
+    }
 
     [branch]
     if (current_config.per_channel) {
       color_output = per_channel_color;
-      color_output /= 0.18f;
       float3 signs = sign(color_output);
       color_output = abs(color_output);
-
-      // No guard for oversized flare
-      float3 new_flare = math::DivideSafe(color_output + current_config.flare, color_output, 1.f);
-
-      float3 exponent = current_config.contrast * new_flare;
-
-      color_output = pow(color_output, exponent);
-
-      color_output *= 0.18f;
+      [branch]
+      if (current_config.contrast != 1.f || current_config.flare != 0.f) {
+        color_output /= current_config.mid_gray_value;
+        color_output = pow(color_output, computed_contrast);
+        color_output *= current_config.mid_gray_value;
+      }
 
       color_output = ReinhardScalableExtended(
           color_output,
           white_clip,
-          m_0,
+          peak,
           0,
-          0.18f,
+          current_config.mid_gray_value,
           current_config.mid_gray_nits / 100.f);
 
       color_output *= signs;
 
     } else {
-      y /= 0.18f;
-
-      // No guard for oversized flare
-      float new_flare = math::DivideSafe(y + current_config.flare, y, 1.f);
-      float exponent = current_config.contrast * new_flare;
-      y = math::SignPow(y, exponent);
-      y *= 0.18f;
+      if (current_config.contrast != 1.f || current_config.flare != 0.f) {
+        y = renodx::color::grade::Contrast(y, computed_contrast, current_config.mid_gray_value);
+      }
 
       float y_new = ReinhardScalableExtended(
           y,
           white_clip,
-          m_0,
+          peak,
           0,
-          0.18f,
+          current_config.mid_gray_value,
           current_config.mid_gray_nits / 100.f);
 
       color_output = input_color * (y_original > 0 ? (y_new / y_original) : 0);
@@ -288,20 +266,15 @@ float3 BT709(float3 bt709, Config current_config) {
                           : current_config.hue_correction_source;
 
       [branch]
-      switch (current_config.hue_correction_method) {
-        case config::hue_correction_method::OKLAB:
-        default:
-          perceptual_new = renodx::color::oklab::from::BT709(color_output);
-          perceptual_old = renodx::color::oklab::from::BT709(source);
-          break;
-        case config::hue_correction_method::ICTCP:
-          perceptual_new = renodx::color::ictcp::from::BT709(color_output);
-          perceptual_old = renodx::color::ictcp::from::BT709(source);
-          break;
-        case config::hue_correction_method::DARKTABLE_UCS:
-          perceptual_new = renodx::color::dtucs::uvY::from::BT709(color_output).zxy;
-          perceptual_old = renodx::color::dtucs::uvY::from::BT709(source).zxy;
-          break;
+      if (current_config.hue_correction_method == config::hue_correction_method::OKLAB) {
+        perceptual_new = renodx::color::oklab::from::BT709(color_output);
+        perceptual_old = renodx::color::oklab::from::BT709(source);
+      } else if (current_config.hue_correction_method == config::hue_correction_method::ICTCP) {
+        perceptual_new = renodx::color::ictcp::from::BT709(color_output);
+        perceptual_old = renodx::color::ictcp::from::BT709(source);
+      } else if (current_config.hue_correction_method == config::hue_correction_method::DARKTABLE_UCS) {
+        perceptual_new = renodx::color::dtucs::uvY::from::BT709(color_output).zxy;
+        perceptual_old = renodx::color::dtucs::uvY::from::BT709(source).zxy;
       }
 
       // Save chrominance to apply back
@@ -316,17 +289,14 @@ float3 BT709(float3 bt709, Config current_config) {
       perceptual_new.yz *= renodx::math::DivideSafe(chrominance_pre_adjust, chrominance_post_adjust, 1.f);
     } else {
       [branch]
-      switch (current_config.hue_correction_method) {
-        default:
-        case config::hue_correction_method::OKLAB:
-          perceptual_new = renodx::color::oklab::from::BT709(color_output);
-          break;
-        case config::hue_correction_method::ICTCP:
-          perceptual_new = renodx::color::ictcp::from::BT709(color_output);
-          break;
-        case config::hue_correction_method::DARKTABLE_UCS:
-          perceptual_new = renodx::color::dtucs::uvY::from::BT709(color_output).zxy;
-          break;
+      if (current_config.hue_correction_method == config::hue_correction_method::OKLAB) {
+        perceptual_new = renodx::color::oklab::from::BT709(color_output);
+      } else if (current_config.hue_correction_method == config::hue_correction_method::ICTCP) {
+        perceptual_new = renodx::color::ictcp::from::BT709(color_output);
+      } else if (current_config.hue_correction_method == config::hue_correction_method::DARKTABLE_UCS) {
+        perceptual_new = renodx::color::dtucs::uvY::from::BT709(color_output).zxy;
+      } else {
+        perceptual_new = renodx::color::oklab::from::BT709(color_output);
       }
     }
 
@@ -371,7 +341,7 @@ float3 BT709(float3 bt709, Config current_config) {
   [branch]
   if (current_config.clamp_peak != -1.f) {
     color_output = renodx::color::convert::ColorSpaces(color_output, current_color_space, current_config.clamp_peak);
-    color_output = min(color_output, m_0);
+    color_output = min(color_output, peak);
     current_color_space = current_config.clamp_peak;
   }
 
@@ -454,7 +424,10 @@ float3 NeutralSDR(float3 bt709, bool per_channel = false) {
   renodrt_config.per_channel = per_channel;
   renodrt_config.hue_correction_strength = 0.f;
   renodrt_config.working_color_space = 0u;
-  renodrt_config.clamp_color_space = 0u;
+  renodrt_config.tone_map_method = RENODX_RENO_DRT_NEUTRAL_SDR_TONE_MAP_METHOD;
+  renodrt_config.clamp_peak = RENODX_RENO_DRT_NEUTRAL_SDR_CLAMP_PEAK;
+  renodrt_config.clamp_color_space = RENODX_RENO_DRT_NEUTRAL_SDR_CLAMP_COLOR_SPACE;
+  
 
   return BT709(bt709, renodrt_config);
 }

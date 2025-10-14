@@ -27,18 +27,18 @@ float3 applyFilmGrain(float3 outputColor, float2 screen, bool colored) {
 //-----SCALING-----//
 float3 PostToneMapScale(float3 color) {
   if (injectedData.toneMapGammaCorrection == 2.f) {
-    color = renodx::color::srgb::EncodeSafe(color);
-    color = renodx::color::gamma::DecodeSafe(color, 2.4f);
-    color *= injectedData.toneMapGameNits / injectedData.toneMapUINits;
-    color = renodx::color::gamma::EncodeSafe(color, 2.4f);
+  color = renodx::color::gamma::EncodeSafe(color, 2.2f);
+  color = renodx::color::gamma::DecodeSafe(color, 2.4f);
+  color *= injectedData.toneMapGameNits / injectedData.toneMapUINits;
+  color = renodx::color::gamma::EncodeSafe(color, 2.4f);
   } else if (injectedData.toneMapGammaCorrection == 1.f) {
-    color = renodx::color::srgb::EncodeSafe(color);
-    color = renodx::color::gamma::DecodeSafe(color, 2.2f);
-    color *= injectedData.toneMapGameNits / injectedData.toneMapUINits;
-    color = renodx::color::gamma::EncodeSafe(color, 2.2f);
+  color *= injectedData.toneMapGameNits / injectedData.toneMapUINits;
+  color = renodx::color::gamma::EncodeSafe(color, 2.2f);
   } else {
-    color *= injectedData.toneMapGameNits / injectedData.toneMapUINits;
-    color = renodx::color::srgb::EncodeSafe(color);
+  color = renodx::color::gamma::EncodeSafe(color, 2.2f);
+  color = renodx::color::srgb::DecodeSafe(color);
+  color *= injectedData.toneMapGameNits / injectedData.toneMapUINits;
+  color = renodx::color::srgb::EncodeSafe(color);
   }
   return color;
 }
@@ -52,13 +52,6 @@ float3 FinalizeOutput(float3 color) {
     color = renodx::color::srgb::DecodeSafe(color);
   }
   color *= injectedData.toneMapUINits;
-  if (injectedData.toneMapType != 1.f) {
-    float y_max = injectedData.toneMapPeakNits;
-    float y = renodx::color::y::from::BT709(abs(color));
-    if (y > y_max) {
-      color *= renodx::math::DivideSafe(y_max, y);
-    }
-  }
   if (injectedData.toneMapType == 0.f) {
     color = renodx::color::bt709::clamp::BT709(color);
   } else {
@@ -72,14 +65,18 @@ float3 InverseToneMap(float3 color) {
   if (injectedData.toneMapType != 0.f) {
     float scaling = injectedData.toneMapPeakNits / injectedData.toneMapGameNits;
     float videoPeak = scaling * renodx::color::bt2408::REFERENCE_WHITE;
-    videoPeak = renodx::color::correct::Gamma(videoPeak, false, 2.4f);
-    scaling = renodx::color::correct::Gamma(scaling, false, 2.4f);
-    if (injectedData.toneMapGammaCorrection == 2.f) {
-      videoPeak = renodx::color::correct::Gamma(videoPeak, true, 2.4f);
-      scaling = renodx::color::correct::Gamma(scaling, true, 2.4f);
-    } else if (injectedData.toneMapGammaCorrection == 1.f) {
-      videoPeak = renodx::color::correct::Gamma(videoPeak, true, 2.2f);
-      scaling = renodx::color::correct::Gamma(scaling, true, 2.2f);
+    videoPeak = renodx::color::gamma::Encode(videoPeak, 2.2f);
+    videoPeak = renodx::color::gamma::Decode(videoPeak, 2.4f);
+    scaling = renodx::color::gamma::Encode(scaling, 2.2f);
+    scaling = renodx::color::gamma::Decode(scaling, 2.4f);
+      if(injectedData.toneMapGammaCorrection == 2.f){
+    videoPeak = renodx::color::gamma::Encode(videoPeak, 2.4f);
+    videoPeak = renodx::color::gamma::Decode(videoPeak, 2.2f);
+    scaling = renodx::color::gamma::Encode(scaling, 2.4f);
+    scaling = renodx::color::gamma::Decode(scaling, 2.2f);    
+    } else if(injectedData.toneMapGammaCorrection == 0.f){
+    videoPeak = renodx::color::correct::Gamma(videoPeak, false, 2.2f);
+    scaling = renodx::color::correct::Gamma(scaling, false, 2.2f);
     }
     color = renodx::color::gamma::Decode(color, 2.4f);
     color = renodx::tonemap::inverse::bt2446a::BT709(color, renodx::color::bt709::REFERENCE_WHITE, videoPeak);
@@ -88,18 +85,28 @@ float3 InverseToneMap(float3 color) {
     color = renodx::color::gamma::EncodeSafe(color, 2.4f);
   } else {
   }
-  color = renodx::color::srgb::DecodeSafe(color);
+  color = renodx::color::gamma::DecodeSafe(color, 2.2f);
   return color;
+}
+
+float gammaCorrectPeak(float peak) {
+  if (injectedData.toneMapGammaCorrection == 0.f) {
+   return renodx::color::gamma::Decode(renodx::color::srgb::Encode(peak / injectedData.toneMapGameNits), 2.2f) * injectedData.toneMapGameNits;
+  } else if (injectedData.toneMapGammaCorrection == 2.f) {
+    return renodx::color::gamma::Decode(renodx::color::gamma::Encode(peak / injectedData.toneMapGameNits, 2.4), 2.2f) * injectedData.toneMapGameNits;
+ } else {
+   return peak;
+ }
 }
 
 //-----TONEMAP-----//
 float3 applyUserTonemap(float3 untonemapped, Texture3D lutTexture, SamplerState lutSampler, float3 LUTless, float midGray, bool cutscene = false) {
   float3 outputColor;
   renodx::tonemap::Config config = renodx::tonemap::config::Create();
-  config.type = min(3, injectedData.toneMapType);
-  config.peak_nits = injectedData.toneMapPeakNits;
+  config.type = injectedData.toneMapType > 1.f ? 3.f : injectedData.toneMapType;
+  config.peak_nits = gammaCorrectPeak(injectedData.toneMapPeakNits);
   config.game_nits = injectedData.toneMapGameNits;
-  config.gamma_correction = injectedData.toneMapGammaCorrection;
+  config.gamma_correction = 0.f;
   config.exposure = injectedData.colorGradeExposure;
   config.highlights = injectedData.colorGradeHighlights;
   config.shadows = injectedData.colorGradeShadows;
@@ -119,13 +126,11 @@ float3 applyUserTonemap(float3 untonemapped, Texture3D lutTexture, SamplerState 
   config.hue_correction_type = injectedData.toneMapPerChannel != 0.f
                                    ? renodx::tonemap::config::hue_correction_type::INPUT
                                    : renodx::tonemap::config::hue_correction_type::CUSTOM;
-  config.hue_correction_strength = injectedData.toneMapPerChannel != 0.f
-                                       ? (1.f - injectedData.toneMapHueCorrection)
-                                       : injectedData.toneMapHueCorrection;
+  config.hue_correction_strength = injectedData.toneMapHueCorrection;
   config.hue_correction_color = lerp(untonemapped, LUTless, injectedData.toneMapHueShift);
-  config.reno_drt_tone_map_method = injectedData.toneMapType == 4.f ? renodx::tonemap::renodrt::config::tone_map_method::REINHARD
+  config.reno_drt_tone_map_method = injectedData.toneMapType == 3.f ? renodx::tonemap::renodrt::config::tone_map_method::REINHARD
                                                                     : renodx::tonemap::renodrt::config::tone_map_method::DANIELE;
-  config.reno_drt_hue_correction_method = (uint)injectedData.toneMapHueProcessor;
+  config.reno_drt_hue_correction_method = (int)injectedData.toneMapHueProcessor;
   config.reno_drt_per_channel = injectedData.toneMapPerChannel != 0;
   config.reno_drt_blowout = injectedData.colorGradeBlowout;
   config.reno_drt_white_clip = injectedData.colorGradeClip;
@@ -138,10 +143,9 @@ float3 applyUserTonemap(float3 untonemapped, Texture3D lutTexture, SamplerState 
   lut_config.size = 32;
   lut_config.tetrahedral = injectedData.colorGradeLUTSampling != 0.f;
   if (injectedData.toneMapType == 0.f) {
-    outputColor = renodx::tonemap::config::Apply(saturate(LUTless), config, lut_config, lutTexture);
-    outputColor = renodx::color::correct::GammaSafe(outputColor, true, 2.2f);
+    outputColor = saturate(LUTless);
   } else {
-    outputColor = renodx::tonemap::config::Apply(untonemapped, config, lut_config, lutTexture);
+    outputColor = untonemapped;
   }
-return outputColor;
+return renodx::tonemap::config::Apply(outputColor, config, lut_config, lutTexture);;
 }

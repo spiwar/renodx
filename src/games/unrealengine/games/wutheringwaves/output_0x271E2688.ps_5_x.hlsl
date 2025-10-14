@@ -85,6 +85,7 @@ void main(linear noperspective float2 w0: TEXCOORD0,
   r2.xyzw = r2.zxwy * cb0[93].zwzw + cb0[93].xyxy;
   r2.xyzw = r2.xyzw * cb0[48].xyxy + cb0[48].zwzw;
   r2.xyzw = cb0[47].zwzw * r2.xyzw;
+
   r3.xyz = t0.Sample(s0_s, r0.xy).xyz;
   r4.x = t0.Sample(s0_s, r2.xy).x;
   r4.y = t0.Sample(s0_s, r2.zw).y;
@@ -130,6 +131,7 @@ void main(linear noperspective float2 w0: TEXCOORD0,
     r3.xyz = r0.xyz * float3(0.959999979, 0.959999979, 0.959999979) + float3(0.560000002, 0.560000002, 0.560000002);
     r3.xyz = r0.xyz * r3.xyz + float3(0.140000001, 0.140000001, 0.140000001);
     // r0.xyz = saturate(r2.xyz / r3.xyz);
+
     r0.xyz = (r2.xyz / r3.xyz);
     if (RENODX_TONE_MAP_TYPE == 0.f) {
       r0.xyz = saturate(r0.xyz);
@@ -142,6 +144,7 @@ void main(linear noperspective float2 w0: TEXCOORD0,
     r2.xyz = float3(1.00495005, 1.00495005, 1.00495005) + r2.xyz;
     // r3.xyz = cmp(float3(0.600000024, 0.600000024, 0.600000024) >= r0.xyz);
     // r3.xyz = r3.xyz ? float3(1, 1, 1) : 0;
+
     r3.xyz = (float3(0.600000024, 0.600000024, 0.600000024) >= r0.xyz) ? float3(1, 1, 1) : 0;
     r4.xyz = -r2.xyz + r0.xyz;
     // r0.xyz = saturate(r3.xyz * r4.xyz + r2.xyz);
@@ -186,6 +189,7 @@ void main(linear noperspective float2 w0: TEXCOORD0,
   if (RENODX_TONE_MAP_TYPE == 0.f) {
     o0.w = saturate(o0.w);
   }
+
   r0.xyz = r1.xyz * float3(0.00390625, 0.00390625, 0.00390625) + r0.xyz;
   r0.xyz = float3(-0.001953125, -0.001953125, -0.001953125) + r0.xyz;
   [branch]

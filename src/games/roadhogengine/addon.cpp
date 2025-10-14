@@ -6,10 +6,7 @@
 #define ImTextureID ImU64
 
 #define DEBUG_LEVEL_0
-#define NOMINMAX
 
-#include <chrono>
-#include <random>
 #include <embed/shaders.h>
 
 #include <deps/imgui/imgui.h>
@@ -19,6 +16,7 @@
 #include "../../mods/swapchain.hpp"
 #include "../../utils/date.hpp"
 #include "../../utils/settings.hpp"
+#include "../../utils/random.hpp"
 #include "./shared.h"
 
 namespace {
@@ -567,7 +565,10 @@ renodx::mods::shader::CustomShaders custom_shaders = {
     }),
     CustomShaderEntry(0xA36BCFE2),  // lens dirt
     CustomShaderEntry(0xA4F44331),  // lens dirt
-    CustomShaderEntry(0x3708D87A),  // lens flare
+    CustomShaderEntryCallback(0x3708D87A, [](reshade::api::command_list* cmd_list) {  // lens flare
+    shader_injection.stateCheck = renodx::utils::swapchain::HasBackBufferRenderTarget(cmd_list) ? 1.f : 0.f;
+    return true;
+    }),
     CustomShaderEntry(0x6720BADB),  // interactable items outline
     CustomShaderEntry(0x4E5E174F),  // something
     // Shadow Warrior 2
@@ -1410,7 +1411,7 @@ renodx::utils::settings::Settings settings = {
     new renodx::utils::settings::Setting{
         .key = "toneMapHueCorrection",
         .binding = &shader_injection.toneMapHueCorrection,
-        .default_value = 100.f,
+        .default_value = 0.f,
         .label = "Hue Correction",
         .section = "Tone Mapping",
         .max = 100.f,
@@ -1520,7 +1521,7 @@ renodx::utils::settings::Settings settings = {
     new renodx::utils::settings::Setting{
         .key = "colorGradeClip",
         .binding = &shader_injection.colorGradeClip,
-        .default_value = 1.f,
+        .default_value = 0.f,
         .label = "Clipping",
         .section = "Color Grading",
         .tint = 0xF6AC1C,
@@ -1618,7 +1619,7 @@ renodx::utils::settings::Settings settings = {
           renodx::utils::settings::UpdateSetting("toneMapPerChannel", 1.f);
           renodx::utils::settings::UpdateSetting("toneMapHueProcessor", 1.f);
           renodx::utils::settings::UpdateSetting("toneMapHueShift", 50.f);
-          renodx::utils::settings::UpdateSetting("toneMapHueCorrection", 100.f);
+          renodx::utils::settings::UpdateSetting("toneMapHueCorrection", 0.f);
           renodx::utils::settings::UpdateSetting("toneMapShoulderStart", 0.25f);
           renodx::utils::settings::UpdateSetting("colorGradeExposure", 1.f);
           renodx::utils::settings::UpdateSetting("colorGradeHighlights", 50.f);
@@ -1628,7 +1629,7 @@ renodx::utils::settings::Settings settings = {
           renodx::utils::settings::UpdateSetting("colorGradeBlowout", 50.f);
           renodx::utils::settings::UpdateSetting("colorGradeDechroma", 0.f);
           renodx::utils::settings::UpdateSetting("colorGradeFlare", 0.f);
-          renodx::utils::settings::UpdateSetting("colorGradeClip", 1.f);
+          renodx::utils::settings::UpdateSetting("colorGradeClip", 0.f);
         },
     },
     new renodx::utils::settings::Setting{
@@ -1665,7 +1666,7 @@ renodx::utils::settings::Settings settings = {
           renodx::utils::settings::UpdateSetting("toneMapType", 3.f);
           renodx::utils::settings::UpdateSetting("toneMapPerChannel", 1.f);
           renodx::utils::settings::UpdateSetting("toneMapHueProcessor", 1.f);
-          renodx::utils::settings::UpdateSetting("toneMapHueCorrection", 80.f);
+          renodx::utils::settings::UpdateSetting("toneMapHueCorrection", 20.f);
           renodx::utils::settings::UpdateSetting("colorGradeExposure", 1.f);
           renodx::utils::settings::UpdateSetting("colorGradeHighlights", 50.f);
           renodx::utils::settings::UpdateSetting("colorGradeShadows", 53.f);
@@ -1774,9 +1775,6 @@ void OnPresent(
     const reshade::api::rect* dest_rect,
     uint32_t dirty_rect_count,
     const reshade::api::rect* dirty_rects) {
-    static std::mt19937 random_generator(std::chrono::system_clock::now().time_since_epoch().count());
-    static auto random_range = static_cast<float>(std::mt19937::max() - std::mt19937::min());
-  shader_injection.random = static_cast<float>(random_generator() + std::mt19937::min()) / random_range;
     if(game_check) return;
     if(game != 0) {
     game_check = true;
@@ -1793,12 +1791,8 @@ void OnPresent(
 
 }  // namespace
 
-// NOLINTBEGIN(readability-identifier-naming)
-
 extern "C" __declspec(dllexport) constexpr const char* NAME = "RenoDX";
 extern "C" __declspec(dllexport) constexpr const char* DESCRIPTION = "RenoDX for Hard Reset Redux, Shadow Warrior (2013) & 2";
-
-// NOLINTEND(readability-identifier-naming)
 
 BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
   switch (fdw_reason) {
@@ -1810,6 +1804,7 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
       renodx::mods::swapchain::swapchain_proxy_compatibility_mode = false;
       renodx::mods::swapchain::swap_chain_proxy_vertex_shader = __swap_chain_proxy_vertex_shader;
       renodx::mods::swapchain::swap_chain_proxy_pixel_shader = __swap_chain_proxy_pixel_shader;
+      renodx::utils::random::binds.push_back(&shader_injection.random);
 
       //  RGBA8_unorm
       renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({
@@ -1838,6 +1833,7 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
   renodx::utils::settings::Use(fdw_reason, &settings, &OnPresetOff);
   renodx::mods::shader::Use(fdw_reason, custom_shaders, &shader_injection);
   renodx::mods::swapchain::Use(fdw_reason, &shader_injection);
+  renodx::utils::random::Use(fdw_reason);
 
   return TRUE;
 }

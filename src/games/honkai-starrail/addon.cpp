@@ -21,7 +21,7 @@
 namespace {
 
 renodx::mods::shader::CustomShaders custom_shaders = {
-    CustomShaderEntry(0x85C7A26F),
+    CustomShaderEntry(0x6B72DD34),
     CustomShaderEntry(0x9667FE5E),
     CustomShaderEntry(0x58B6C388),
     CustomShaderEntry(0x5B35A377),
@@ -224,12 +224,8 @@ void OnPresetOff() {
 
 }  // namespace
 
-// NOLINTBEGIN(readability-identifier-naming)
-
 extern "C" __declspec(dllexport) constexpr const char* NAME = "RenoDX";
 extern "C" __declspec(dllexport) constexpr const char* DESCRIPTION = "RenoDX for Honkai: Star Rail";
-
-// NOLINTEND(readability-identifier-naming)
 
 BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
   switch (fdw_reason) {

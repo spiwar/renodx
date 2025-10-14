@@ -38,6 +38,7 @@ build32.ninja/**
 build.vs/**
 build32.vs/**
 
-
+bin/**
 **/.vshistory/
 .cache/**
+.env

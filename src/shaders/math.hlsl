@@ -13,10 +13,11 @@ static const float FLT16_MIN = CROSS_COMPILE(asfloat(0x0400), 0.00006103515625);
 static const float FLT16_MAX = 65504.f;
 static const float FLT32_MIN = CROSS_COMPILE(asfloat(0x00800000), 1.17549435082228750797e-38);
 static const float FLT32_MAX = CROSS_COMPILE(asfloat(0x7F7FFFFF), 3.40282346638528859812e+38);
-static const float FLT_MIN = FLT32_MIN;
-static const float FLT_MAX = FLT32_MAX;
+static const float FLT_MIN = CROSS_COMPILE(asfloat(0x00800000), 1.17549435082228750797e-38);
+static const float FLT_MAX = CROSS_COMPILE(asfloat(0x7F7FFFFF), 3.40282346638528859812e+38);;
 static const float INFINITY = CROSS_COMPILE(asfloat(0x7F800000), 1.0 / 0.0);
 static const float NEG_INFINITY = CROSS_COMPILE(asfloat(0xFF800000), -1.0 / 0.0);
+static const float PI = 3.14159265358979323846f;
 
 #if __SHADER_TARGET_MAJOR >= 6 || defined(VULKAN)
 #define SIGN_FUNCTION_GENERATOR(T) \
@@ -30,45 +31,36 @@ static const float NEG_INFINITY = CROSS_COMPILE(asfloat(0xFF800000), -1.0 / 0.0)
   }
 #endif
 
-SIGN_FUNCTION_GENERATOR(float)
-SIGN_FUNCTION_GENERATOR(float2)
-SIGN_FUNCTION_GENERATOR(float3)
-SIGN_FUNCTION_GENERATOR(float4)
-
-#undef SIGN_FUNCTION_GENERATOR
-
-#define SIGNPOW_FUNCTION_GENERATOR(struct)                      \
-  struct SignPow(struct x, float exponent) {                    \
-    return Sign(x) * pow(abs(x), exponent); \
+#define SIGNPOW_FUNCTION_GENERATOR(struct)   \
+  struct SignPow(struct x, float exponent) { \
+    return Sign(x) * pow(abs(x), exponent);  \
   }
-
-SIGNPOW_FUNCTION_GENERATOR(float)
-SIGNPOW_FUNCTION_GENERATOR(float2)
-SIGNPOW_FUNCTION_GENERATOR(float3)
-SIGNPOW_FUNCTION_GENERATOR(float4)
-#undef SIGNPOW_FUNCTION_GENERATOR
 
 #define SIGNSQRT_FUNCTION_GENERATOR(struct) \
   struct SignSqrt(struct x) {               \
     return Sign(x) * sqrt(abs(x));          \
   }
 
-SIGNSQRT_FUNCTION_GENERATOR(float)
-SIGNSQRT_FUNCTION_GENERATOR(float2)
-SIGNSQRT_FUNCTION_GENERATOR(float3)
-SIGNSQRT_FUNCTION_GENERATOR(float4)
-#undef SIGNSQRT_FUNCTION_GENERATOR
-
 #define CBRT_FUNCTION_GENERATOR(struct) \
   struct Cbrt(struct x) {               \
     return SignPow(x, 1.f / 3.f);       \
   }
 
-CBRT_FUNCTION_GENERATOR(float)
-CBRT_FUNCTION_GENERATOR(float2)
-CBRT_FUNCTION_GENERATOR(float3)
-CBRT_FUNCTION_GENERATOR(float4)
+#define ALL_FLOATS_FUNCTION_GENERATOR(generator) \
+  generator(float)                               \
+      generator(float2)                          \
+          generator(float3)                      \
+              generator(float4)
+
+ALL_FLOATS_FUNCTION_GENERATOR(SIGN_FUNCTION_GENERATOR)
+ALL_FLOATS_FUNCTION_GENERATOR(SIGNPOW_FUNCTION_GENERATOR)
+ALL_FLOATS_FUNCTION_GENERATOR(SIGNSQRT_FUNCTION_GENERATOR)
+ALL_FLOATS_FUNCTION_GENERATOR(CBRT_FUNCTION_GENERATOR)
+#undef SIGN_FUNCTION_GENERATOR
+#undef SIGNPOW_FUNCTION_GENERATOR
+#undef SIGNSQRT_FUNCTION_GENERATOR
 #undef CBRT_FUNCTION_GENERATOR
+#undef ALL_FLOATS_FUNCTION_GENERATOR
 
 float Average(float3 color) {
   return (color.x + color.y + color.z) / 3.f;
@@ -106,6 +98,54 @@ float3 DivideSafe(float3 dividend, float3 divisor, float3 fallback) {
   return float3(DivideSafe(dividend.x, divisor.x, fallback.x),
                 DivideSafe(dividend.y, divisor.y, fallback.y),
                 DivideSafe(dividend.z, divisor.z, fallback.z));
+}
+
+float4 DivideSafe(float4 dividend, float4 divisor, float4 fallback) {
+  return float4(DivideSafe(dividend.x, divisor.x, fallback.x),
+                DivideSafe(dividend.y, divisor.y, fallback.y),
+                DivideSafe(dividend.z, divisor.z, fallback.z),
+                DivideSafe(dividend.w, divisor.w, fallback.w));
+}
+
+float Max(float x, float y, float z) {
+  return max(x, max(y, z));
+}
+
+float Max(float x, float y, float z, float w) {
+  return max(x, max(y, max(z, w)));
+}
+
+float Min(float x, float y, float z) {
+  return min(x, min(y, z));
+}
+
+float Min(float x, float y, float z, float w) {
+  return min(x, min(y, min(z, w)));
+}
+
+float3x3 Invert3x3(float3x3 m) {
+  float a = m[0][0], b = m[0][1], c = m[0][2];
+  float d = m[1][0], e = m[1][1], f = m[1][2];
+  float g = m[2][0], h = m[2][1], i = m[2][2];
+
+  float A = (e * i - f * h);
+  float B = -(d * i - f * g);
+  float C = (d * h - e * g);
+  float D = -(b * i - c * h);
+  float E = (a * i - c * g);
+  float F = -(a * h - b * g);
+  float G = (b * f - c * e);
+  float H = -(a * f - c * d);
+  float I = (a * e - b * d);
+
+  float det = a * A + b * B + c * C;
+  float invDet = 1.0 / det;
+
+  return float3x3(
+             A, D, G,
+             B, E, H,
+             C, F, I)
+         * invDet;
 }
 
 END_NAMESPACE(math)

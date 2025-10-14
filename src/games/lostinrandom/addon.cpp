@@ -6,7 +6,6 @@
 #define ImTextureID ImU64
 
 #define DEBUG_LEVEL_0
-#define NOMINMAX
 
 #include <chrono>
 #include <random>
@@ -20,6 +19,7 @@
 #include "../../mods/swapchain.hpp"
 #include "../../utils/date.hpp"
 #include "../../utils/settings.hpp"
+#include "../../utils/random.hpp"
 #include "./shared.h"
 
 namespace {
@@ -36,6 +36,7 @@ renodx::mods::shader::CustomShaders custom_shaders = {
     CustomShaderEntry(0x13EEF169),  // lutbuilder
     CustomShaderEntry(0x9862BA48),  // uberpost UI (mirror)
     CustomShaderEntry(0xEF39E7C4),  // uberpost
+    CustomShaderEntry(0xE5C37261),  // uberpost
     CustomShaderEntry(0xC244242D),  // fsr1
     CustomShaderEntry(0xE102D2F9),  // fsr1 fxaa
     CustomShaderEntryCallback(0xD00B5B47, [](reshade::api::command_list* cmd_list) {  // fxaa
@@ -167,7 +168,7 @@ renodx::utils::settings::Settings settings = {
     new renodx::utils::settings::Setting{
         .key = "toneMapHueShift",
         .binding = &shader_injection.toneMapHueShift,
-        .default_value = 100.f,
+        .default_value = 50.f,
         .label = "Hue Shift",
         .section = "Tone Mapping",
         .tooltip = "Hue-shift emulation strength.",
@@ -181,7 +182,7 @@ renodx::utils::settings::Settings settings = {
     new renodx::utils::settings::Setting{
         .key = "toneMapHueCorrection",
         .binding = &shader_injection.toneMapHueCorrection,
-        .default_value = 100.f,
+        .default_value = 0.f,
         .label = "Hue Correction",
         .section = "Tone Mapping",
         .tint = 0x1E5787,
@@ -379,8 +380,8 @@ renodx::utils::settings::Settings settings = {
           renodx::utils::settings::UpdateSetting("toneMapPerChannel", 1.f);
           renodx::utils::settings::UpdateSetting("toneMapColorSpace", 2.f);
           renodx::utils::settings::UpdateSetting("toneMapHueProcessor", 2.f);
-          renodx::utils::settings::UpdateSetting("toneMapHueShift", 100.f);
-          renodx::utils::settings::UpdateSetting("toneMapHueCorrection", 100.f);
+          renodx::utils::settings::UpdateSetting("toneMapHueShift", 50.f);
+          renodx::utils::settings::UpdateSetting("toneMapHueCorrection", 0.f);
           renodx::utils::settings::UpdateSetting("colorGradeExposure", 1.f);
           renodx::utils::settings::UpdateSetting("colorGradeHighlights", 50.f);
           renodx::utils::settings::UpdateSetting("colorGradeShadows", 50.f);
@@ -405,7 +406,7 @@ renodx::utils::settings::Settings settings = {
             renodx::utils::settings::UpdateSetting("toneMapPerChannel", 1.f);
             renodx::utils::settings::UpdateSetting("toneMapColorSpace", 2.f);
             renodx::utils::settings::UpdateSetting("toneMapHueProcessor", 1.f);
-            renodx::utils::settings::UpdateSetting("toneMapHueCorrection", 100.f);
+            renodx::utils::settings::UpdateSetting("toneMapHueCorrection", 0.f);
             renodx::utils::settings::UpdateSetting("colorGradeExposure", 1.f);
             renodx::utils::settings::UpdateSetting("colorGradeHighlights", 50.f);
             renodx::utils::settings::UpdateSetting("colorGradeShadows", 47.f);
@@ -444,6 +445,33 @@ renodx::utils::settings::Settings settings = {
           renodx::utils::settings::UpdateSetting("colorGradeLUTStrength", 100.f);
           renodx::utils::settings::UpdateSetting("colorGradeLUTScaling", 100.f);
           renodx::utils::settings::UpdateSetting("colorGradeLUTSampling", 1.f); },
+    },
+    new renodx::utils::settings::Setting{
+        .value_type = renodx::utils::settings::SettingValueType::BUTTON,
+        .label = "Random rules!",
+        .section = "Color Grading Templates",
+        .group = "templates",
+        .tooltip = "RenoDiceX"
+        "\nUse at your own risk...",
+        .tint = 0x201018,
+        .on_change = []() {
+          renodx::utils::settings::UpdateSetting("toneMapType", round(1.51f + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(4.49f-1.51f)))));
+          renodx::utils::settings::UpdateSetting("toneMapPerChannel", round(static_cast <float> (rand()) / static_cast <float> (RAND_MAX)));
+          renodx::utils::settings::UpdateSetting("toneMapColorSpace", round(static_cast <float> (rand()) / (static_cast <float> (RAND_MAX/2.f))));
+          renodx::utils::settings::UpdateSetting("toneMapHueProcessor", round(static_cast <float> (rand()) / (static_cast <float> (RAND_MAX/2.f))));
+          renodx::utils::settings::UpdateSetting("toneMapHueShift", static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * 100.f);
+          renodx::utils::settings::UpdateSetting("toneMapHueCorrection", static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * 100.f);
+          renodx::utils::settings::UpdateSetting("colorGradeExposure", 0.25f + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(1.75f-0.25f))));
+          renodx::utils::settings::UpdateSetting("colorGradeHighlights", static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * 100.f);
+          renodx::utils::settings::UpdateSetting("colorGradeShadows", static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * 100.f);
+          renodx::utils::settings::UpdateSetting("colorGradeContrast", (0.25f + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(0.75f-0.25f)))) * 100.f);
+          renodx::utils::settings::UpdateSetting("colorGradeSaturation", static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * 100.f);
+          renodx::utils::settings::UpdateSetting("colorGradeBlowout", static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * 100.f);
+          renodx::utils::settings::UpdateSetting("colorGradeDechroma", static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * 100.f);
+          renodx::utils::settings::UpdateSetting("colorGradeFlare", static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * 100.f);
+          renodx::utils::settings::UpdateSetting("colorGradeClip", static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * 100.f);
+          renodx::utils::settings::UpdateSetting("colorGradeLUTStrength", static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * 100.f);
+          renodx::utils::settings::UpdateSetting("colorGradeLUTScaling", static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * 100.f);},
     },
     new renodx::utils::settings::Setting{
         .value_type = renodx::utils::settings::SettingValueType::BUTTON,
@@ -510,23 +538,14 @@ void OnPresent(
     const reshade::api::rect* dest_rect,
     uint32_t dirty_rect_count,
     const reshade::api::rect* dirty_rects) {
-    static std::mt19937 random_generator(std::chrono::system_clock::now().time_since_epoch().count());
-    static auto random_range = static_cast<float>(std::mt19937::max() - std::mt19937::min());
-  shader_injection.random_1 = static_cast<float>(random_generator() + std::mt19937::min()) / random_range;
-  shader_injection.random_2 = static_cast<float>(random_generator() + std::mt19937::min()) / random_range;
-  shader_injection.random_3 = static_cast<float>(random_generator() + std::mt19937::min()) / random_range;
   shader_injection.postfinal_check = postfinal_check;
   postfinal_check = false;
 }
 
 }  // namespace
 
-// NOLINTBEGIN(readability-identifier-naming)
-
 extern "C" __declspec(dllexport) constexpr const char* NAME = "RenoDX";
 extern "C" __declspec(dllexport) constexpr const char* DESCRIPTION = "RenoDX for Lost in Random / Lost in Random: The Eternal Die";
-
-// NOLINTEND(readability-identifier-naming)
 
 BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
   switch (fdw_reason) {
@@ -534,6 +553,10 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
       if (!reshade::register_addon(h_module)) return FALSE;
       renodx::mods::swapchain::force_borderless = false;
       renodx::mods::swapchain::prevent_full_screen = false;
+      renodx::utils::random::binds.push_back(&shader_injection.random_1);
+      renodx::utils::random::binds.push_back(&shader_injection.random_2);
+      renodx::utils::random::binds.push_back(&shader_injection.random_3);
+
       //  Bloom
       renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({
           .old_format = reshade::api::format::r11g11b10_float,
@@ -579,6 +602,7 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
   renodx::utils::settings::Use(fdw_reason, &settings, &OnPresetOff);
   renodx::mods::swapchain::Use(fdw_reason);
   renodx::mods::shader::Use(fdw_reason, custom_shaders, &shader_injection);
+  renodx::utils::random::Use(fdw_reason);
 
   return TRUE;
 }

@@ -6,7 +6,6 @@
 #define ImTextureID ImU64
 
 #define DEBUG_LEVEL_0
-#define NOMINMAX
 
 #include <embed/shaders.h>
 #include <chrono>
@@ -298,7 +297,7 @@ renodx::utils::settings::Settings settings = {
     new renodx::utils::settings::Setting{
         .key = "toneMapHueCorrection",
         .binding = &shader_injection.toneMapHueCorrection,
-        .default_value = 100.f,
+        .default_value = 0.f,
         .label = "Hue Correction",
         .section = "Tone Mapping",
         .max = 100.f,
@@ -409,7 +408,7 @@ renodx::utils::settings::Settings settings = {
     new renodx::utils::settings::Setting{
         .key = "colorGradeClip",
         .binding = &shader_injection.colorGradeClip,
-        .default_value = 2.f,
+        .default_value = 0.f,
         .label = "Clipping",
         .section = "Color Grading",
         .tint = 0x01A8DF,
@@ -513,7 +512,7 @@ renodx::utils::settings::Settings settings = {
           renodx::utils::settings::UpdateSetting("toneMapColorSpace", 2.f);
           renodx::utils::settings::UpdateSetting("toneMapHueProcessor", 1.f);
           renodx::utils::settings::UpdateSetting("toneMapHueShift", 50.f);
-          renodx::utils::settings::UpdateSetting("toneMapHueCorrection", 100.f);
+          renodx::utils::settings::UpdateSetting("toneMapHueCorrection", 0.f);
           renodx::utils::settings::UpdateSetting("colorGradeExposure", 1.f);
           renodx::utils::settings::UpdateSetting("colorGradeHighlights", 50.f);
           renodx::utils::settings::UpdateSetting("colorGradeShadows", 50.f);
@@ -522,7 +521,7 @@ renodx::utils::settings::Settings settings = {
           renodx::utils::settings::UpdateSetting("colorGradeBlowout", 50.f);
           renodx::utils::settings::UpdateSetting("colorGradeDechroma", 0.f);
           renodx::utils::settings::UpdateSetting("colorGradeFlare", 0.f);
-          renodx::utils::settings::UpdateSetting("colorGradeClip", 2.f);
+          renodx::utils::settings::UpdateSetting("colorGradeClip", 0.f);
           renodx::utils::settings::UpdateSetting("colorGradeLUTStrength", 100.f);
           renodx::utils::settings::UpdateSetting("colorGradeLUTScaling", 100.f);
           renodx::utils::settings::UpdateSetting("colorGradeLUTSampling", 1.f);
@@ -539,7 +538,7 @@ renodx::utils::settings::Settings settings = {
         renodx::utils::settings::UpdateSetting("toneMapPerChannel", 1.f);
         renodx::utils::settings::UpdateSetting("toneMapColorSpace", 2.f);
         renodx::utils::settings::UpdateSetting("toneMapHueProcessor", 1.f);
-        renodx::utils::settings::UpdateSetting("toneMapHueCorrection", 80.f);
+        renodx::utils::settings::UpdateSetting("toneMapHueCorrection", 20.f);
         renodx::utils::settings::UpdateSetting("colorGradeExposure", 1.f);
         renodx::utils::settings::UpdateSetting("colorGradeHighlights", 50.f);
         renodx::utils::settings::UpdateSetting("colorGradeShadows", 50.f);
@@ -565,6 +564,7 @@ renodx::utils::settings::Settings settings = {
       renodx::utils::settings::UpdateSetting("toneMapPerChannel", 0.f);
       renodx::utils::settings::UpdateSetting("toneMapColorSpace", 0.f);
       renodx::utils::settings::UpdateSetting("toneMapHueProcessor", 1.f);
+      renodx::utils::settings::UpdateSetting("toneMapHueShift", 50.f);
       renodx::utils::settings::UpdateSetting("toneMapHueCorrection", 100.f);
       renodx::utils::settings::UpdateSetting("colorGradeExposure", 1.f);
       renodx::utils::settings::UpdateSetting("colorGradeHighlights", 50.f);
@@ -672,6 +672,26 @@ void OnInitSwapchain(reshade::api::swapchain* swapchain, bool resize) {
   }
 }
 
+void AddAdvancedSettings() {
+  auto* setting = new renodx::utils::settings::Setting{
+              .key = "SwapChainForceBorderless",
+              .value_type = renodx::utils::settings::SettingValueType::INTEGER,
+              .default_value = 0.f,
+              .label = "Force Borderless Window",
+              .section = "About",
+              .tooltip = "Requires game restart to take effect.",
+              .labels = {
+                  "Disabled",
+                  "Enabled",
+              },
+              .on_change_value = [](float previous, float current) { renodx::mods::swapchain::force_borderless = (current == 1.f); },
+              .is_global = true,
+          };
+          renodx::utils::settings::LoadSetting(renodx::utils::settings::global_name, setting);
+          renodx::mods::swapchain::force_borderless = (setting->GetValue() == 1.f);
+          settings.push_back(setting);
+}
+
 bool game_check = false;
 
 void OnPresent(
@@ -697,38 +717,38 @@ void OnPresent(
       settings[21]->label = "Vanilla Grading Strength";
       settings[22]->label = "Vanilla Grading Scaling";
       settings[23]->is_visible = []() { return false ; },
-      settings[28]->default_value = 0.f;
-      settings[28]->is_visible = []() { return shader_injection.fxFilmGrainType != 0.f ; };
-      settings[29]->labels = {"Vanilla (none)", "Perceptual"};
-      settings[29]->is_visible = []() { return true ; };
+      settings[27]->default_value = 0.f;
+      settings[27]->is_visible = []() { return shader_injection.fxFilmGrainType != 0.f ; };
+      settings[28]->labels = {"Vanilla (none)", "Perceptual"};
+      settings[28]->is_visible = []() { return true ; };
+      settings[32]->is_visible = []() { return true ; };
+      settings[33]->label = "Bloom should be enabled in game settings.";
       settings[33]->is_visible = []() { return true ; };
-      settings[34]->label = "Bloom should be enabled in game settings.";
-      settings[34]->is_visible = []() { return true ; };
     }
     if(game == 2){
-      settings[26]->is_visible = []() { return false ; };
+      settings[25]->is_visible = []() { return false ; };
+      settings[27]->is_visible = []() { return false ; };
       settings[28]->is_visible = []() { return false ; };
-      settings[29]->is_visible = []() { return false ; };
+      settings[30]->is_visible = []() { return true ; };
       settings[31]->is_visible = []() { return true ; };
-      settings[32]->is_visible = []() { return true ; };
-      settings[34]->label = "Game's Calibration settings only apply to UI and videos.";
-      settings[34]->is_visible = []() { return true ; };
+      settings[33]->label = "Game's Calibration settings only apply to UI and videos.";
+      settings[33]->is_visible = []() { return true ; };
     }
     if(game == 3){
-      settings[26]->label = "Lines";
+      settings[25]->label = "Lines";
+      settings[27]->tooltip = "Requires Post FX set to Medium or above.";
       settings[28]->tooltip = "Requires Post FX set to Medium or above.";
-      settings[29]->tooltip = "Requires Post FX set to Medium or above.";
+      settings[30]->is_visible = []() { return true ; };
       settings[31]->is_visible = []() { return true ; };
-      settings[32]->is_visible = []() { return true ; };
-      settings[34]->label = "Game's Calibration settings only apply to UI and videos.";
-      settings[34]->is_visible = []() { return true ; };
+      settings[33]->label = "Game's Calibration settings only apply to UI and videos.";
+      settings[33]->is_visible = []() { return true ; };
     }
     if(game == 5){
       settings[1]->labels = {"Vanilla", "None", "ACES", "RenoDRT (Reinhard)", "RenoDRT (Daniele)"},
       settings[7]->is_visible = []() { return current_settings_mode >= 2; },
       settings[20]->is_enabled = []() { return shader_injection.toneMapType == 3.f; };
-      settings[33]->is_visible = []() { return true ; };
-      settings[33]->on_change = []() {
+      settings[32]->is_visible = []() { return true ; };
+      settings[32]->on_change = []() {
         renodx::utils::settings::UpdateSetting("toneMapType", 3.f);
         renodx::utils::settings::UpdateSetting("toneMapPerChannel", 0.f);
         renodx::utils::settings::UpdateSetting("toneMapColorSpace", 0.f);
@@ -747,32 +767,29 @@ void OnPresent(
         renodx::utils::settings::UpdateSetting("colorGradeLUTStrength", 100.f);
         renodx::utils::settings::UpdateSetting("colorGradeLUTScaling", 100.f);
         renodx::utils::settings::UpdateSetting("colorGradeLUTSampling", 1.f); },
-      settings[34]->label = "Game's Color Settings only apply to UI and videos.";
-      settings[34]->is_visible = []() { return true ; };
+      settings[33]->label = "Game's Color Settings only apply to UI and videos.";
+      settings[33]->is_visible = []() { return true ; };
     }
   }
 }
 
 }  // namespace
 
-// NOLINTBEGIN(readability-identifier-naming)
-
 extern "C" __declspec(dllexport) constexpr const char* NAME = "RenoDX";
 extern "C" __declspec(dllexport) constexpr const char* DESCRIPTION = "RenoDX for Dunia Engine";
-
-// NOLINTEND(readability-identifier-naming)
 
 BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
   switch (fdw_reason) {
     case DLL_PROCESS_ATTACH:
       if (!reshade::register_addon(h_module)) return FALSE;
-      renodx::mods::swapchain::force_borderless = false;
+      //renodx::mods::swapchain::force_borderless = false;
       renodx::mods::swapchain::prevent_full_screen = true;
       renodx::mods::swapchain::use_resource_cloning = true;
       // renodx::mods::shader::force_pipeline_cloning = true;
       renodx::mods::swapchain::swapchain_proxy_compatibility_mode = false;
       renodx::mods::swapchain::swap_chain_proxy_vertex_shader = __swap_chain_proxy_vertex_shader;
       renodx::mods::swapchain::swap_chain_proxy_pixel_shader = __swap_chain_proxy_pixel_shader;
+      AddAdvancedSettings();
 
       // FC2 / Avatar
       renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({

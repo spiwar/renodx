@@ -182,10 +182,8 @@ void OnPresetOff() {
 
 }  // namespace
 
-// NOLINTBEGIN(readability-identifier-naming)
-
-extern "C" __declspec(dllexport) const char* NAME = "RenoDX";
-extern "C" __declspec(dllexport) const char* DESCRIPTION = "RenoDX for The Town of Light";
+extern "C" __declspec(dllexport) constexpr const char* NAME = "RenoDX";
+extern "C" __declspec(dllexport) constexpr const char* DESCRIPTION = "RenoDX for The Town of Light";
 
 
    // Caches all the states we might need to modify to draw a simple pixel shader.
@@ -310,8 +308,6 @@ struct DrawStateStack {
 #undef ENABLE_SHADER_CLASS_INSTANCES
 };
 
-// NOLINTEND(readability-identifier-naming)
-
 // Final shader [ty Ersh/FF14]
 struct __declspec(uuid("1228220F-364A-46A2-BB29-1CCE591A018A")) DeviceData {
   reshade::api::pipeline final_pipeline = {};
@@ -335,12 +331,12 @@ void OnInitDevice(reshade::api::device* device) {
     std::vector<reshade::api::pipeline_subobject> subobjects;
 
     reshade::api::shader_desc vs_desc = {};
-    vs_desc.code = __0xFFFFFFFD.begin();
+    vs_desc.code = __0xFFFFFFFD.data();
     vs_desc.code_size = __0xFFFFFFFD.size();
     subobjects.push_back({reshade::api::pipeline_subobject_type::vertex_shader, 1, &vs_desc});
 
     reshade::api::shader_desc ps_desc = {};
-    ps_desc.code = __0xFFFFFFFE.begin();
+    ps_desc.code = __0xFFFFFFFE.data();
     ps_desc.code_size = __0xFFFFFFFE.size();
     subobjects.push_back({reshade::api::pipeline_subobject_type::pixel_shader, 1, &ps_desc});
 

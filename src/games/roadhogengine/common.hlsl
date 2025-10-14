@@ -58,6 +58,24 @@ float3 PostToneMapScale(float3 color, bool linear_space = false) {
   return color;
 }
 
+// something blend PLUS
+float3 InvertFinalizeOutput(float3 color) {
+  if (injectedData.toneMapGammaCorrection == 2.f) {
+    color = renodx::color::gamma::DecodeSafe(color, 2.4f);
+    color *= 80.f / injectedData.toneMapUINits;
+    color = renodx::color::gamma::EncodeSafe(color, 2.4f);
+  } else if (injectedData.toneMapGammaCorrection == 1.f) {
+    color = renodx::color::gamma::DecodeSafe(color, 2.2f);
+    color *= 80.f / injectedData.toneMapUINits;
+    color = renodx::color::gamma::EncodeSafe(color, 2.2f);
+  } else {
+    color = renodx::color::srgb::DecodeSafe(color);
+    color *= 80.f / injectedData.toneMapUINits;
+    color = renodx::color::srgb::EncodeSafe(color);
+  }
+  return color;
+}
+
 float3 FinalizeOutput(float3 color, bool linear_space = false) {
   if (!linear_space) {  // HRR, SW(2013)
     if (injectedData.toneMapGammaCorrection == 2.f) {
@@ -67,32 +85,17 @@ float3 FinalizeOutput(float3 color, bool linear_space = false) {
     } else {
       color = renodx::color::srgb::DecodeSafe(color);
     }
-    color *= injectedData.toneMapUINits;
-    if (injectedData.toneMapType != 1.f) {    // SW(2013) Lens Dirt/Flare can raise peak
-      float y_max = injectedData.toneMapPeakNits;
-      float y = renodx::color::y::from::BT709(abs(color));
-      if (y > y_max) {
-        color *= renodx::math::DivideSafe(y_max, y);
-      }
-    }
   } else {  // SW2
     if (injectedData.toneMapGammaCorrection == 2.f) {
       color = renodx::color::correct::GammaSafe(color, false, 2.4f);
     } else if (injectedData.toneMapGammaCorrection == 1.f) {
       color = renodx::color::correct::GammaSafe(color, false, 2.2f);
     }
-    color *= injectedData.toneMapUINits;
-    if (injectedData.toneMapType >= 2.f) {  // SW2 inventory items
-      float y_max = injectedData.toneMapPeakNits;
-      float y = renodx::color::y::from::BT709(abs(color));
-      if (y > y_max) {
-        color *= renodx::math::DivideSafe(y_max, y);
-      }
-    }
   }
-
+  color *= injectedData.toneMapUINits;
   if (injectedData.toneMapType == 0.f) {
     color = renodx::color::bt709::clamp::BT709(color);
+    color = min(injectedData.toneMapGameNits, color);
   } else {
     color = renodx::color::bt709::clamp::BT2020(color);
   }
@@ -242,16 +245,14 @@ float3 applyUserTonemap(float3 untonemapped, float2 screen, bool grain = true) {
   config.hue_correction_type = injectedData.toneMapPerChannel != 0.f
                                    ? renodx::tonemap::config::hue_correction_type::INPUT
                                    : renodx::tonemap::config::hue_correction_type::CUSTOM;
-  config.hue_correction_strength = injectedData.toneMapPerChannel != 0.f
-                                       ? (1.f - injectedData.toneMapHueCorrection)
-                                       : injectedData.toneMapHueCorrection;
+  config.hue_correction_strength = injectedData.toneMapHueCorrection;
   config.hue_correction_color = lerp(outputColor, renodx::tonemap::renodrt::NeutralSDR(outputColor), injectedData.toneMapHueShift);
   config.reno_drt_tone_map_method = injectedData.toneMapType == 4.f ? renodx::tonemap::renodrt::config::tone_map_method::REINHARD
                                                                     : renodx::tonemap::renodrt::config::tone_map_method::DANIELE;
-  config.reno_drt_hue_correction_method = (uint)injectedData.toneMapHueProcessor;
+  config.reno_drt_hue_correction_method = (int)injectedData.toneMapHueProcessor;
   config.reno_drt_blowout = 1.f - injectedData.colorGradeBlowout;
   config.reno_drt_per_channel = injectedData.toneMapPerChannel != 0.f;
-  config.reno_drt_white_clip = injectedData.colorGradeClip;
+  config.reno_drt_white_clip = injectedData.colorGradeClip == 0.f ? 1.f : injectedData.colorGradeClip;
   if (injectedData.toneMapType == 2.f) {  // Frostbite
     outputColor = applyFrostbite(outputColor, config);
   } else if (injectedData.toneMapType == 5.f) {  // DICE
@@ -288,7 +289,7 @@ float3 vanillaTonemapHDR(float3 color) {
 
 float3 applyUserTonemapACES(float3 untonemapped) {
   float3 outputColor;
-  float midGray = renodx::color::y::from::BT709(vanillaTonemapSDR(float3(0.18f, 0.18f, 0.18f)));
+  float midGray = vanillaTonemapSDR(float3(0.18f, 0.18f, 0.18f)).x;
   renodx::tonemap::Config config = renodx::tonemap::config::Create();
   config.type = min(3, injectedData.toneMapType);
   config.peak_nits = injectedData.toneMapPeakNits;
@@ -308,16 +309,14 @@ float3 applyUserTonemapACES(float3 untonemapped) {
   config.hue_correction_type = injectedData.toneMapPerChannel != 0.f
                                    ? renodx::tonemap::config::hue_correction_type::INPUT
                                    : renodx::tonemap::config::hue_correction_type::CUSTOM;
-  config.hue_correction_strength = injectedData.toneMapPerChannel != 0.f
-                                       ? (1.f - injectedData.toneMapHueCorrection)
-                                       : injectedData.toneMapHueCorrection;
+  config.hue_correction_strength = injectedData.toneMapHueCorrection;
   config.hue_correction_color = lerp(untonemapped, vanillaTonemapSDR(untonemapped), injectedData.toneMapHueShift);
   config.reno_drt_tone_map_method = injectedData.toneMapType == 4.f ? renodx::tonemap::renodrt::config::tone_map_method::REINHARD
                                                                     : renodx::tonemap::renodrt::config::tone_map_method::DANIELE;
-  config.reno_drt_hue_correction_method = (uint)injectedData.toneMapHueProcessor;
+  config.reno_drt_hue_correction_method = (int)injectedData.toneMapHueProcessor;
   config.reno_drt_blowout = 1.f - injectedData.colorGradeBlowout;
   config.reno_drt_per_channel = injectedData.toneMapPerChannel != 0.f;
-  config.reno_drt_white_clip = injectedData.colorGradeClip;
+  config.reno_drt_white_clip = injectedData.colorGradeClip == 0.f ? 8.f : injectedData.colorGradeClip;
   if (injectedData.toneMapType == 0.f) {
     outputColor = vanillaTonemapHDR(untonemapped);
   } else {

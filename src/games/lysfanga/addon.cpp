@@ -6,10 +6,6 @@
 #define ImTextureID ImU64
 
 #define DEBUG_LEVEL_0
-#define NOMINMAX
-
-#include <chrono>
-#include <random>
 
 #include <embed/shaders.h>
 
@@ -20,26 +16,33 @@
 #include "../../mods/swapchain.hpp"
 #include "../../utils/date.hpp"
 #include "../../utils/settings.hpp"
+#include "../../utils/random.hpp"
 #include "./shared.h"
 
 
 namespace {
 
+ShaderInjectData shader_injection;
+bool isTonemap(reshade::api::command_list* cmd_list) {
+  shader_injection.stateCheck = true;
+  return true;
+}
+
 renodx::mods::shader::CustomShaders custom_shaders = {
     CustomShaderEntry(0xED457D04),  // lutbuilder
-    CustomShaderEntry(0xE651D798),  // uberpost (tonemap)
-    CustomShaderEntry(0x2C36979C),  // uberpost (tonemap) 2
-    CustomShaderEntry(0x9A27FDCD),  // uberpost (tonemap) 3
-    CustomShaderEntry(0x9D2A9AD7),  // uberpost (tonemap) 4
+    CustomShaderEntryCallback(0xE651D798, &isTonemap),  // uberpost (tonemap)
+    CustomShaderEntryCallback(0x2C36979C, &isTonemap),  // uberpost (tonemap) 2
+    CustomShaderEntryCallback(0x9A27FDCD, &isTonemap),  // uberpost (tonemap) 3
+    CustomShaderEntryCallback(0x9D2A9AD7, &isTonemap),  // uberpost (tonemap) 4
     CustomShaderEntry(0x55B0DCB7),  // UI text
     CustomShaderEntry(0xC1457489),  // UI text 2
     CustomShaderEntry(0x36588C4F),  // UI True Shadow something... goes brrr with upgrades
     CustomShaderEntry(0x5FDD841D),  // blooom
+    CustomShaderEntry(0x22F1555A),  // uberpost (slideshow)
     CustomShaderEntry(0xBB09D0B3),  // uberpost (LUT/blooom)
     CustomShaderEntry(0x20133A8B),  // Final
 };
 
-ShaderInjectData shader_injection;
 float current_settings_mode = 0;
 renodx::utils::settings::Settings settings = {
     new renodx::utils::settings::Setting{
@@ -152,7 +155,7 @@ renodx::utils::settings::Settings settings = {
     new renodx::utils::settings::Setting{
         .key = "toneMapHueShift",
         .binding = &shader_injection.toneMapHueShift,
-        .default_value = 100.f,
+        .default_value = 50.f,
         .label = "Hue Shift",
         .section = "Tone Mapping",
         .tooltip = "Hue-shift emulation strength.",
@@ -166,7 +169,7 @@ renodx::utils::settings::Settings settings = {
     new renodx::utils::settings::Setting{
         .key = "toneMapHueCorrection",
         .binding = &shader_injection.toneMapHueCorrection,
-        .default_value = 100.f,
+        .default_value = 0.f,
         .label = "Hue Correction",
         .section = "Tone Mapping",
         .tint = 0x1E5787,
@@ -360,7 +363,7 @@ renodx::utils::settings::Settings settings = {
         .label = "Bloom 2",
         .section = "Effects",
         .tooltip = "This 2nd bloom applies on top of tonemapping, menus and some UI elements..."
-                   "\nRecommended OFF as it allows optimal brightness management."
+                   "\nRecommended OFF for optimal brightness management."
                    "\nCan't be disabled in game settings.",
         .tint = 0x452f7A,
         .max = 100.f,
@@ -368,41 +371,17 @@ renodx::utils::settings::Settings settings = {
     },
     new renodx::utils::settings::Setting{
         .value_type = renodx::utils::settings::SettingValueType::BUTTON,
-        .label = "Bloom balance",
-        .section = "Effects",
-        .group = "button-line-1",
-        .tooltip = "Click me..! Hover Bloom 2 for more info.",
-        .tint = 0x452f7A,
-        .on_change = []() {
-          renodx::utils::settings::UpdateSetting("fxBloom", 100.f);
-          renodx::utils::settings::UpdateSetting("fxBlooom", 0.f);
-        },
-    },
-    new renodx::utils::settings::Setting{
-        .value_type = renodx::utils::settings::SettingValueType::BUTTON,
-        .label = "Reset",
-        .section = "Effects",
-        .group = "button-line-1",
-        .tooltip = "Click me..! Hover Bloom 2 for more info.",
-        .tint = 0x452f7A,
-        .on_change = []() {
-          renodx::utils::settings::UpdateSetting("fxBloom", 50.f);
-          renodx::utils::settings::UpdateSetting("fxBlooom", 50.f);
-        },
-    },
-    new renodx::utils::settings::Setting{
-        .value_type = renodx::utils::settings::SettingValueType::BUTTON,
         .label = "Reset",
         .section = "Color Grading Templates",
-        .group = "button-line-2",
+        .group = "button-line-1",
         .tint = 0xDB9D47,
         .on_change = []() {
           renodx::utils::settings::UpdateSetting("toneMapType", 3.f);
           renodx::utils::settings::UpdateSetting("toneMapPerChannel", 1.f);
           renodx::utils::settings::UpdateSetting("toneMapColorSpace", 2.f);
           renodx::utils::settings::UpdateSetting("toneMapHueProcessor", 2.f);
-          renodx::utils::settings::UpdateSetting("toneMapHueShift", 100.f);
-          renodx::utils::settings::UpdateSetting("toneMapHueCorrection", 100.f);
+          renodx::utils::settings::UpdateSetting("toneMapHueShift", 50.f);
+          renodx::utils::settings::UpdateSetting("toneMapHueCorrection", 0.f);
           renodx::utils::settings::UpdateSetting("colorGradeExposure", 1.f);
           renodx::utils::settings::UpdateSetting("colorGradeHighlights", 50.f);
           renodx::utils::settings::UpdateSetting("colorGradeShadows", 50.f);
@@ -421,14 +400,14 @@ renodx::utils::settings::Settings settings = {
         .value_type = renodx::utils::settings::SettingValueType::BUTTON,
         .label = "HDR Look",
         .section = "Color Grading Templates",
-        .group = "button-line-2",
+        .group = "button-line-1",
         .tint = 0x1C1C3C,
         .on_change = []() {
             renodx::utils::settings::UpdateSetting("toneMapType", 3.f);
             renodx::utils::settings::UpdateSetting("toneMapPerChannel", 1.f);
             renodx::utils::settings::UpdateSetting("toneMapColorSpace", 2.f);
             renodx::utils::settings::UpdateSetting("toneMapHueProcessor", 1.f);
-            renodx::utils::settings::UpdateSetting("toneMapHueCorrection", 100.f);
+            renodx::utils::settings::UpdateSetting("toneMapHueCorrection", 0.f);
             renodx::utils::settings::UpdateSetting("colorGradeExposure", 1.f);
             renodx::utils::settings::UpdateSetting("colorGradeHighlights", 50.f);
             renodx::utils::settings::UpdateSetting("colorGradeShadows", 47.f);
@@ -446,7 +425,7 @@ renodx::utils::settings::Settings settings = {
         .value_type = renodx::utils::settings::SettingValueType::BUTTON,
         .label = "HDR Look 2",
         .section = "Color Grading Templates",
-        .group = "button-line-2",
+        .group = "button-line-1",
         .tint = 0x1C1C3C,
         .on_change = []() {
           renodx::utils::settings::UpdateSetting("toneMapType", 4.f);
@@ -471,15 +450,14 @@ renodx::utils::settings::Settings settings = {
     new renodx::utils::settings::Setting{
         .value_type = renodx::utils::settings::SettingValueType::TEXT,
         .label = "Enable Post-Processing in game Video settings."
-                 "\nRest (including Bloom & Vignette) is up to preference."
-                 "\nBloom balance is highly recommended.",
+                 "\nRest (including Bloom & Vignette) is up to preference.",
         .section = "Notes",
     },
     new renodx::utils::settings::Setting{
         .value_type = renodx::utils::settings::SettingValueType::BUTTON,
         .label = "HDR Den Discord",
         .section = "About",
-        .group = "button-line-3",
+        .group = "button-line-2",
         .tint = 0x5865F2,
         .on_change = []() {
           renodx::utils::platform::LaunchURL("https://discord.gg/XUhv", "tR54yc");
@@ -489,7 +467,7 @@ renodx::utils::settings::Settings settings = {
         .value_type = renodx::utils::settings::SettingValueType::BUTTON,
         .label = "Github",
         .section = "About",
-        .group = "button-line-3",
+        .group = "button-line-2",
         .on_change = []() {
           renodx::utils::platform::LaunchURL("https://github.com/clshortfuse/renodx");
         },
@@ -541,21 +519,13 @@ void OnPresent(
     const reshade::api::rect* dest_rect,
     uint32_t dirty_rect_count,
     const reshade::api::rect* dirty_rects) {
-    static std::mt19937 random_generator(std::chrono::system_clock::now().time_since_epoch().count());
-    static auto random_range = static_cast<float>(std::mt19937::max() - std::mt19937::min());
-  shader_injection.random_1 = static_cast<float>(random_generator() + std::mt19937::min()) / random_range;
-  shader_injection.random_2 = static_cast<float>(random_generator() + std::mt19937::min()) / random_range;
-  shader_injection.random_3 = static_cast<float>(random_generator() + std::mt19937::min()) / random_range;
+  shader_injection.stateCheck = false;
 }
 
 }  // namespace
 
-// NOLINTBEGIN(readability-identifier-naming)
-
 extern "C" __declspec(dllexport) constexpr const char* NAME = "RenoDX";
 extern "C" __declspec(dllexport) constexpr const char* DESCRIPTION = "RenoDX for Lysfanga: The Time Shift Warrior";
-
-// NOLINTEND(readability-identifier-naming)
 
 BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
   switch (fdw_reason) {
@@ -563,6 +533,9 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
       if (!reshade::register_addon(h_module)) return FALSE;
       renodx::mods::swapchain::force_borderless = false;
       renodx::mods::swapchain::prevent_full_screen = false;
+      renodx::utils::random::binds.push_back(&shader_injection.random_1);
+      renodx::utils::random::binds.push_back(&shader_injection.random_2);
+      renodx::utils::random::binds.push_back(&shader_injection.random_3);
 
       //  Bloom
       renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({
@@ -592,6 +565,7 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
   renodx::utils::settings::Use(fdw_reason, &settings, &OnPresetOff);
   renodx::mods::swapchain::Use(fdw_reason);
   renodx::mods::shader::Use(fdw_reason, custom_shaders, &shader_injection);
+  renodx::utils::random::Use(fdw_reason);
 
   return TRUE;
 }
