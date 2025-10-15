@@ -1,6 +1,6 @@
 #include "../shared.h"
 
-// ---- Created with 3Dmigoto v1.4.1 on Fri Jun  6 06:47:43 2025
+// ---- Created with 3Dmigoto v1.4.1 on Wed Oct 15 08:08:00 2025
 Texture2D<float4> t2 : register(t2);
 
 Texture2D<float4> t1 : register(t1);
@@ -12,7 +12,7 @@ SamplerState s1_s : register(s1);
 SamplerState s0_s : register(s0);
 
 cbuffer cb0 : register(b0) {
-  float4 cb0[166];
+  float4 cb0[168];
 }
 
 // 3Dmigoto declarations
@@ -30,9 +30,9 @@ void main(
   r0.xyzw = t2.Sample(s0_s, v1.xy).xyzw;
   r1.xyzw = t1.Sample(s1_s, v1.xy).xyzw;
   r1.xyz = r1.xyz + r0.xyz;
-  r0.w = cmp(0.5 < cb0[164].x);
+  r0.w = cmp(0.5 < cb0[166].x);
   if (r0.w != 0) {
-    r0.w = cb0[165].y * cb0[163].w;
+    r0.w = cb0[167].y * cb0[165].w;
     // r2.xyz = r1.zxy * r0.www;
     r2.xyz = r1.xyz * r0.www;
     // start of ARRI C3 1000 LUT
@@ -49,21 +49,21 @@ void main(
     /*r2.xyz = r2.xyz * float3(5.55555582, 5.55555582, 5.55555582) + float3(0.0479959995, 0.0479959995, 0.0479959995);
       r2.xyz = log2(r2.xyz);
       r2.xyz = saturate(r2.xyz * float3(0.0734997839, 0.0734997839, 0.0734997839) + float3(0.386036009, 0.386036009, 0.386036009));
-      r2.yzw = cb0[163].zzz * r2.xyz;
+      r2.yzw = cb0[165].zzz * r2.xyz;
       r0.w = floor(r2.y);
-      r3.xy = float2(0.5, 0.5) * cb0[163].xy;
-      r3.yz = r2.zw * cb0[163].xy + r3.xy;
-      r3.x = r0.w * cb0[163].y + r3.y;
+      r3.xy = float2(0.5, 0.5) * cb0[165].xy;
+      r3.yz = r2.zw * cb0[165].xy + r3.xy;
+      r3.x = r0.w * cb0[165].y + r3.y;
       r4.xyzw = t0.SampleLevel(s0_s, r3.xz, 0).xyzw;
-      r5.x = cb0[163].y;
+      r5.x = cb0[165].y;
       r5.y = 0;
       r2.yz = r5.xy + r3.xz;
       r3.xyzw = t0.SampleLevel(s0_s, r2.yz, 0).xyzw;
-      r0.w = r2.x * cb0[163].z + -r0.w;
+      r0.w = r2.x * cb0[165].z + -r0.w;
       r2.xyz = r3.xyz + -r4.xyz;
       r2.xyz = r0.www * r2.xyz + r4.xyz;
       // end of ARRI C3 1000 LUT
-      r3.xyz = saturate(r2.xyz);;*/
+      r3.xyz = saturate(r2.xyz);*/
     r3.xyz = r2.xyz;
     r3.xyz = float3(1, 1, 1) + -r3.xyz;
     r3.xyz = r3.xyz + -r2.xyz;
