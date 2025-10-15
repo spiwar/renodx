@@ -548,8 +548,10 @@ class Decompiler {
       NOINTERPOLATION,
       NOPERSPECTIVE,
       NOPERSPECTIVE_SAMPLE,
+      NOPERSPECTIVE_CENTROID,
       LINEAR,
       CENTROID,
+      SAMPLE
     } interp_mode;
 
     int32_t dyn_index = -1;
@@ -568,8 +570,10 @@ class Decompiler {
       if (input == "nointerpolation") return InterpMode::NOINTERPOLATION;
       if (input == "noperspective") return InterpMode::NOPERSPECTIVE;
       if (input == "noperspective sample") return InterpMode::NOPERSPECTIVE_SAMPLE;
+      if (input == "noperspective centroid") return InterpMode::NOPERSPECTIVE_CENTROID;
       if (input == "linear") return InterpMode::LINEAR;
       if (input == "centroid") return InterpMode::CENTROID;
+      if (input == "sample") return InterpMode::SAMPLE;
       throw std::invalid_argument("Unknown InterpMode");
     }
 
@@ -658,6 +662,12 @@ class Decompiler {
           break;
         case SignatureProperty::InterpMode::NOPERSPECTIVE_SAMPLE:
           string_stream << "noperspective sample ";
+          break;
+        case SignatureProperty::InterpMode::NOPERSPECTIVE_CENTROID:
+          string_stream << "noperspective centroid ";
+          break;
+        case SignatureProperty::InterpMode::SAMPLE:
+          string_stream << "sample ";
           break;
         case SignatureProperty::InterpMode::NONE:
         default:
@@ -1373,6 +1383,9 @@ class Decompiler {
             std::string definition = std::string("%") + std::string(line_declaration.substr(7));
             if (definition == "%$Globals") {
               definition = "%\"$Globals\"";
+            }
+            if (definition == "%hostlayout.$Globals"){
+              definition = "%\"hostlayout.$Globals\"";
             }
             auto pair = this->type_definitions.find(definition);
             assert(pair != this->type_definitions.end());
