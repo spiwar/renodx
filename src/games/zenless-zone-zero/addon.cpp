@@ -21,27 +21,7 @@
 
 namespace {
 
-renodx::mods::shader::CustomShaders custom_shaders = {
-    CustomShaderEntry(0x9496233C),  // Secondary lutbuilder, seems to be used on characters.
-    CustomShaderEntry(0x9E8F1321),
-    CustomShaderEntry(0xBBACCDAD),
-    CustomShaderEntry(0x2E1A6F79),
-    CustomShaderEntry(0xBB3FD02D),
-    CustomShaderEntry(0xB30C1D4B),
-    CustomShaderEntry(0xF8C68E05),
-    CustomShaderEntry(0xD889AB3A),
-    CustomShaderEntry(0xDA780F00),
-    CustomShaderEntry(0xDF092A7C),
-    CustomShaderEntry(0xF7EBAAB1),
-    CustomShaderEntry(0xE6718C61),
-    CustomShaderEntry(0x95144D64),
-    CustomShaderEntry(0xF666D567),
-    CustomShaderEntry(0x43AA0C3B),
-    CustomShaderEntry(0x9585D63F),
-    CustomShaderEntry(0x125B5714),
-    CustomShaderEntry(0x7FC3C83A),
-    CustomShaderEntry(0x28F74247)
-  };
+renodx::mods::shader::CustomShaders custom_shaders = {__ALL_CUSTOM_SHADERS};
 
 ShaderInjectData shader_injection;
 const std::string build_date = __DATE__;
@@ -342,42 +322,53 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
   switch (fdw_reason) {
     case DLL_PROCESS_ATTACH:
       if (!reshade::register_addon(h_module)) return FALSE;
-      renodx::mods::swapchain::use_resource_cloning = true;
-      renodx::mods::swapchain::swap_chain_proxy_vertex_shader = __swap_chain_proxy_vertex_shader;
-      renodx::mods::swapchain::swap_chain_proxy_pixel_shader = __swap_chain_proxy_pixel_shader;
 
-      //  RG11B10_float (UAV stuff)
+      renodx::mods::shader::expected_constant_buffer_index = 13;
+      renodx::mods::shader::expected_constant_buffer_space = 50;
+      renodx::mods::shader::force_pipeline_cloning = true;
+
+      renodx::mods::swapchain::expected_constant_buffer_index = 13;
+      renodx::mods::swapchain::expected_constant_buffer_space = 50;
+
+      renodx::mods::swapchain::use_resource_cloning = true;
+      renodx::mods::swapchain::swapchain_proxy_revert_state = true;
+      renodx::mods::swapchain::swap_chain_proxy_shaders = {
+          {
+              reshade::api::device_api::d3d11,
+              {
+                  .vertex_shader = __swap_chain_proxy_vertex_shader_dx11,
+                  .pixel_shader = __swap_chain_proxy_pixel_shader_dx11,
+              },
+          },
+          {
+              reshade::api::device_api::d3d12,
+              {
+                  .vertex_shader = __swap_chain_proxy_vertex_shader_dx12,
+                  .pixel_shader = __swap_chain_proxy_pixel_shader_dx12,
+              },
+          },
+      };
+
+      /*//  RG11B10_float (UAV stuff)
       renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({.old_format = reshade::api::format::r11g11b10_float,
                                                                      .new_format = reshade::api::format::r16g16b16a16_float,
                                                                      .ignore_size = true,
-                                                                     .view_upgrades = {
-                                                                         {{reshade::api::resource_usage::shader_resource,
-                                                                           reshade::api::format::r11g11b10_float},
-                                                                          reshade::api::format::r16g16b16a16_float},
-                                                                         {{reshade::api::resource_usage::unordered_access,
-                                                                           reshade::api::format::r11g11b10_float},
-                                                                          reshade::api::format::r16g16b16a16_float},
-                                                                         {{reshade::api::resource_usage::render_target,
-                                                                           reshade::api::format::r11g11b10_float},
-                                                                          reshade::api::format::r16g16b16a16_float},
-                                                                     }});
+                                                                     .use_resource_view_cloning = true,
+                                                                     .usage_include = reshade::api::resource_usage::render_target | reshade::api::resource_usage::unordered_access});*/
 
       //  RGBA8_typeless
       renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({.old_format = reshade::api::format::r8g8b8a8_typeless,
                                                                      .new_format = reshade::api::format::r16g16b16a16_float,
-                                                                     .index = 0,
-                                                                     .ignore_size = true});
-
-      renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({.old_format = reshade::api::format::r8g8b8a8_typeless,
-                                                                     .new_format = reshade::api::format::r16g16b16a16_float,
-                                                                     .ignore_size = true,
                                                                      .use_resource_view_cloning = true,
-                                                                     .use_resource_view_hot_swap = true});
+                                                                     .aspect_ratio = renodx::mods::swapchain::SwapChainUpgradeTarget::BACK_BUFFER,
+                                                                     .aspect_ratio_tolerance = 0.02f
+                                                                     //.use_resource_view_hot_swap = true
+                                                                     });
 
-      reshade::register_event<reshade::addon_event::draw>(OnDraw);
+      /*reshade::register_event<reshade::addon_event::draw>(OnDraw);
       reshade::register_event<reshade::addon_event::draw_indexed>(OnDrawIndexed);
       reshade::register_event<reshade::addon_event::draw_or_dispatch_indirect>(OnDrawOrDispatchIndirect);
-      reshade::register_event<reshade::addon_event::dispatch>(OnDispatch);
+      reshade::register_event<reshade::addon_event::dispatch>(OnDispatch);*/
 
       break;
     case DLL_PROCESS_DETACH:

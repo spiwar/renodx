@@ -1,9 +1,7 @@
-#include "./shared.h"
+#include "../shared.h"
 
-// Primary UberPost (Used in Open World/Most Combat Stages)
-// ---- Created with 3Dmigoto v1.4.1 on Fri Jun  6 06:47:38 2025
-Texture2D<float4> t5 : register(t5);
-
+// lacks a lut for some reason? used on the main menu.
+// ---- Created with 3Dmigoto v1.4.1 on Fri Jun  6 06:47:32 2025
 Texture2D<float4> t4 : register(t4);
 
 Texture2D<float4> t3 : register(t3);
@@ -44,7 +42,7 @@ void main(
 
   r0.x = cmp(0 < cb1[11].w);
   if (r0.x != 0) {
-    r0.xyzw = t3.Sample(s2_s, v1.xy).xyzw;
+    r0.xyzw = t2.Sample(s2_s, v1.xy).xyzw;
     r1.xy = float2(0.100000001, 0.100000001) * r0.xy;
     r0.xy = r0.xy * float2(0.100000001, 0.100000001) + v1.xy;
     r0.zw = r1.xy * r0.zz;
@@ -79,7 +77,7 @@ void main(
   r2.xy = v1.xy + r2.xy;
   r4.xyzw = t0.Sample(s0_s, r2.xy).xyzw;
 
-  //float3 untonemapped = r4.rgb;
+  //float3 untonemapped = r4.xyz;
 
   r2.xy = v1.xy + r2.zw;
   r1.xy = r1.xz * r1.yy + r2.xy;
@@ -116,7 +114,7 @@ void main(
     r0.z = cmp(0.5 >= r0.z);
     r0.z = r0.z ? 0.999989986 : -1;
     r3.y = cb1[26].z * r0.z + r0.y;
-    r5.xyzw = t4.Sample(s3_s, r3.xy).xyzw;
+    r5.xyzw = t3.Sample(s3_s, r3.xy).xyzw;
     r3.xyz = log2(abs(r5.xyz));
     r3.xyz = float3(0.333333343, 0.333333343, 0.333333343) * r3.xyz;
     r3.xyz = exp2(r3.xyz);
@@ -135,7 +133,7 @@ void main(
     r4.yzw = r0.www ? r4.yzw : r3.xyz;
     if (r1.z != 0) {
       r0.zw = r0.xy * cb1[20].xy + cb1[20].zw;
-      r5.xyzw = t5.Sample(s0_s, r0.zw).xyzw;
+      r5.xyzw = t4.Sample(s0_s, r0.zw).xyzw;
       r1.xzw = cb1[21].yyy * r5.xyz;
       r4.yzw = r1.xzw * r3.xyz + r4.yzw;
     }
@@ -167,51 +165,47 @@ void main(
   }
   float3 untonemapped = r2.xyz;
 
-  /*
-  // Sample as 2D - ARRI C3 1000 LUT (internal)
-  r0.xyz = r2.zxy * float3(5.55555582, 5.55555582, 5.55555582) + float3(0.0479959995, 0.0479959995, 0.0479959995);
-  r0.xyz = log2(r0.xyz);
-  r0.xyz = saturate(r0.xyz * float3(0.0734997839, 0.0734997839, 0.0734997839) + float3(0.386036009, 0.386036009, 0.386036009));
-  r0.yzw = cb1[0].zzz * r0.xyz;
-  r0.y = floor(r0.y);
-  r1.xy = float2(0.5, 0.5) * cb1[0].xy;
-  r1.yz = r0.zw * cb1[0].xy + r1.xy;
-  r1.x = r0.y * cb1[0].y + r1.y;
-  r2.xyzw = t2.SampleLevel(s0_s, r1.xz, 0).xyzw;
-  r3.x = cb1[0].y;
-  r3.y = 0;
-  r0.zw = r3.xy + r1.xz;
-  r1.xyzw = t2.SampleLevel(s0_s, r0.zw, 0).xyzw;
-  r0.x = r0.x * cb1[0].z + -r0.y;
-  r0.yzw = r1.xyz + -r2.xyz;
-  r0.xyz = r0.xxx * r0.yzw + r2.xyz;*/
+  float vanillaMidGray = renodx::tonemap::unity::BT709(0.18f).x;
 
-  renodx::lut::Config lut_config = renodx::lut::config::Create(
-      s0_s,
-      1.f,
-      0.f,
-      renodx::lut::config::type::ARRI_C1000_NO_CUT,
-      renodx::lut::config::type::LINEAR);
+  renodx::tonemap::Config config = renodx::tonemap::config::Create();
+  config.type = injectedData.toneMapType;
+  config.peak_nits = injectedData.toneMapPeakNits;
+  config.game_nits = injectedData.toneMapGameNits;
+  config.gamma_correction = injectedData.toneMapGammaCorrection;
+  config.exposure = injectedData.colorGradeExposure;
+  config.highlights = injectedData.colorGradeHighlights;
+  config.shadows = injectedData.colorGradeShadows;
+  config.contrast = injectedData.colorGradeContrast;
+  config.saturation = injectedData.colorGradeSaturation;
+  config.mid_gray_value = vanillaMidGray;
+  config.mid_gray_nits = vanillaMidGray * 100.f;
+  config.reno_drt_dechroma = injectedData.colorGradeBlowout;
+  config.reno_drt_flare = injectedData.colorGradeFlare;
 
-  r0.xyz = renodx::lut::Sample(t2, lut_config, untonemapped);
+  config.hue_correction_type = renodx::tonemap::config::hue_correction_type::CUSTOM;
+  config.hue_correction_color = lerp(
+      untonemapped,
+      saturate(renodx::tonemap::unity::BT709(untonemapped)),
+      injectedData.toneMapHueCorrection);
+
+  r2.xyz = renodx::tonemap::config::Apply(untonemapped, config);
   
-  r0.w = cmp(0 < cb1[13].x);
-  if (r0.w != 0) {
-    r1.xy = v1.xy * cb1[8].xy + cb1[8].zw;
-    r1.xyzw = t1.Sample(s1_s, r1.xy).xyzw;
-    r0.w = -0.5 + r1.w;
-    r0.w = r0.w + r0.w;
-    r1.x = dot(r0.xyz, float3(0.212672904, 0.715152204, 0.0721750036));
-    r1.x = sqrt(r1.x);
-    r1.x = cb1[13].y * -r1.x + 1;
-    r1.yzw = r0.xyz * r0.www;
-    r1.yzw = cb1[13].xxx * r1.yzw;
-    r0.xyz = r1.yzw * r1.xxx + r0.xyz;
+  r0.x = cmp(0 < cb1[13].x);
+  if (r0.x != 0) {
+    r0.xy = v1.xy * cb1[8].xy + cb1[8].zw;
+    r0.xyzw = t1.Sample(s1_s, r0.xy).xyzw;
+    r0.x = -0.5 + r0.w;
+    r0.x = r0.x + r0.x;
+    r0.y = dot(r2.xyz, float3(0.212672904, 0.715152204, 0.0721750036));
+    r0.y = sqrt(r0.y);
+    r0.y = cb1[13].y * -r0.y + 1;
+    r0.xzw = r2.xyz * r0.xxx;
+    r0.xzw = cb1[13].xxx * r0.xzw;
+    r2.xyz = r0.xzw * r0.yyy + r2.xyz;
   }
-  //o0.xyz = saturate(r0.xyz);
-  o0.xyz = r0.xyz;
-
+  // o0.xyz = saturate(r2.xyz);
+  o0.rgb = r2.xyz;
   o0.rgb *= injectedData.toneMapGameNits / injectedData.toneMapUINits;
-
+  o0.w = 1;
   return;
 }

@@ -1,7 +1,7 @@
-#include "./shared.h"
+#include "../shared.h"
 
-// Used on the Black and White portion of the battle intro
-// ---- Created with 3Dmigoto v1.4.1 on Sat Jun  7 03:16:03 2025
+// Used by Yixuan Ult
+// ---- Created with 3Dmigoto v1.4.1 on Sat Jun  7 04:03:43 2025
 Texture2D<float4> t6 : register(t6);
 
 Texture2D<float4> t5 : register(t5);
@@ -166,51 +166,13 @@ void main(
     r0.xyz = r0.xxx * r0.yzw + cb1[6].xyz;
     r2.xyz = r2.xyz * r0.xyz;
   }
-  float3 untonemapped = r2.rgb;
+  float3 untonemapped = r2.xyz;
 
-  renodx::lut::Config lut_config = renodx::lut::config::Create(
-      s0_s,
-      cb1[0].w * injectedData.colorGradeLUTStrength,
-      injectedData.colorGradeLUTScaling,
-      renodx::lut::config::type::SRGB,
-      renodx::lut::config::type::SRGB,
-      cb1[0].xyz  // precompute
-  );
-
-  float vanillaMidGray = renodx::tonemap::unity::BT709(0.18f).x;
-
-  renodx::tonemap::Config config = renodx::tonemap::config::Create();
-  config.type = injectedData.toneMapType;
-  config.peak_nits = injectedData.toneMapPeakNits;
-  config.game_nits = injectedData.toneMapGameNits;
-  config.gamma_correction = injectedData.toneMapGammaCorrection;
-  config.exposure = injectedData.colorGradeExposure;
-  config.highlights = injectedData.colorGradeHighlights;
-  config.shadows = injectedData.colorGradeShadows;
-  config.contrast = injectedData.colorGradeContrast;
-  config.saturation = injectedData.colorGradeSaturation;
-  config.mid_gray_value = vanillaMidGray;
-  config.mid_gray_nits = vanillaMidGray * 100.f;
-  config.reno_drt_dechroma = injectedData.colorGradeBlowout;
-  config.reno_drt_flare = injectedData.colorGradeFlare;
-
-  config.hue_correction_type = renodx::tonemap::config::hue_correction_type::CUSTOM;
-  config.hue_correction_color = lerp(
-      untonemapped,
-      saturate(renodx::tonemap::unity::BT709(untonemapped)),
-      injectedData.toneMapHueCorrection);
-
-  r0.xyz = renodx::tonemap::config::Apply(untonemapped, config, lut_config, t2);
-  
-  /* Original LUT Sampling
-  r2.xyz = saturate(r2.xyz);
-  r0.xyz = float3(12.9200001, 12.9200001, 12.9200001) * r2.zxy;
-  r1.xyz = log2(r2.zxy);
-  r1.xyz = float3(0.416666657, 0.416666657, 0.416666657) * r1.xyz;
-  r1.xyz = exp2(r1.xyz);
-  r1.xyz = r1.xyz * float3(1.05499995, 1.05499995, 1.05499995) + float3(-0.0549999997, -0.0549999997, -0.0549999997);
-  r2.xyz = cmp(float3(0.00313080009, 0.00313080009, 0.00313080009) >= r2.zxy);
-  r0.xyz = r2.xyz ? r0.xyz : r1.xyz;
+  /*
+  // Sample as 2D - ARRI C3 1000 LUT (internal)
+  r0.xyz = r2.zxy * float3(5.55555582, 5.55555582, 5.55555582) + float3(0.0479959995, 0.0479959995, 0.0479959995);
+  r0.xyz = log2(r0.xyz);
+  r0.xyz = saturate(r0.xyz * float3(0.0734997839, 0.0734997839, 0.0734997839) + float3(0.386036009, 0.386036009, 0.386036009));
   r0.yzw = cb1[0].zzz * r0.xyz;
   r0.y = floor(r0.y);
   r1.xy = float2(0.5, 0.5) * cb1[0].xy;
@@ -223,15 +185,16 @@ void main(
   r1.xyzw = t2.SampleLevel(s0_s, r0.zw, 0).xyzw;
   r0.x = r0.x * cb1[0].z + -r0.y;
   r0.yzw = r1.xyz + -r2.xyz;
-  r0.xyz = r0.xxx * r0.yzw + r2.xyz;
-  r1.xyz = float3(0.0773993805, 0.0773993805, 0.0773993805) * r0.xyz;
-  r2.xyz = float3(0.0549999997, 0.0549999997, 0.0549999997) + r0.xyz;
-  r2.xyz = float3(0.947867334, 0.947867334, 0.947867334) * r2.xyz;
-  r2.xyz = log2(abs(r2.xyz));
-  r2.xyz = float3(2.4000001, 2.4000001, 2.4000001) * r2.xyz;
-  r2.xyz = exp2(r2.xyz);
-  r0.xyz = cmp(float3(0.0404499993, 0.0404499993, 0.0404499993) >= r0.xyz);
-  r0.xyz = r0.xyz ? r1.xyz : r2.xyz;*/
+  r0.xyz = r0.xxx * r0.yzw + r2.xyz;*/
+
+  renodx::lut::Config lut_config = renodx::lut::config::Create(
+      s0_s,
+      1.f,
+      0.f,
+      renodx::lut::config::type::ARRI_C1000_NO_CUT,
+      renodx::lut::config::type::LINEAR);
+
+  r0.xyz = renodx::lut::Sample(t2, lut_config, untonemapped);
 
   r0.w = cmp(0 < cb1[13].x);
   if (r0.w != 0) {
@@ -246,13 +209,14 @@ void main(
     r1.yzw = cb1[13].xxx * r1.yzw;
     r0.xyz = r1.yzw * r1.xxx + r0.xyz;
   }
+
   r0.w = r0.x + r0.y;
   r0.w = r0.w + r0.z;
   r1.x = 0.333333343 * r0.w;
   r0.xyz = -r0.www * float3(0.333333343, 0.333333343, 0.333333343) + r0.xyz;
   r0.xyz = r0.xyz * cb2[0].www + r1.xxx;
   // r1.xyz = saturate(r0.xyz);
-  r1.xyz = r0.xyz;
+  r1.xyz = (r0.xyz);
   r1.xyz = float3(1, 1, 1) + -r1.xyz;
   r1.xyz = r1.xyz + -r0.xyz;
   r0.xyz = cb2[1].www * r1.xyz + r0.xyz;
@@ -288,7 +252,6 @@ void main(
   } else {
     o0.xyz = r0.xyz;
   }
-
   o0.rgb *= injectedData.toneMapGameNits / injectedData.toneMapUINits;
 
   return;

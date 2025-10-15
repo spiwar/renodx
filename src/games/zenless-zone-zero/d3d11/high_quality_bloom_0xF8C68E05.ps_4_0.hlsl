@@ -1,4 +1,4 @@
-#include "./shared.h"
+#include "../shared.h"
 
 // ---- Created with 3Dmigoto v1.4.1 on Fri Jun  6 06:47:43 2025
 Texture2D<float4> t2 : register(t2);

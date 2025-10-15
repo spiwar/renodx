@@ -1,7 +1,9 @@
-#include "./shared.h"
+#include "../shared.h"
 
-// used on farming stages?
-// ---- Created with 3Dmigoto v1.4.1 on Fri Jun  6 22:15:59 2025
+// Used on the Black and White portion of the battle intro
+// ---- Created with 3Dmigoto v1.4.1 on Sat Jun  7 03:16:03 2025
+Texture2D<float4> t6 : register(t6);
+
 Texture2D<float4> t5 : register(t5);
 
 Texture2D<float4> t4 : register(t4);
@@ -21,6 +23,10 @@ SamplerState s2_s : register(s2);
 SamplerState s1_s : register(s1);
 
 SamplerState s0_s : register(s0);
+
+cbuffer cb2 : register(b2) {
+  float4 cb2[4];
+}
 
 cbuffer cb1 : register(b1) {
   float4 cb1[27];
@@ -44,7 +50,7 @@ void main(
 
   r0.x = cmp(0 < cb1[11].w);
   if (r0.x != 0) {
-    r0.xyzw = t3.Sample(s2_s, v1.xy).xyzw;
+    r0.xyzw = t4.Sample(s2_s, v1.xy).xyzw;
     r1.xy = float2(0.100000001, 0.100000001) * r0.xy;
     r0.xy = r0.xy * float2(0.100000001, 0.100000001) + v1.xy;
     r0.zw = r1.xy * r0.zz;
@@ -78,9 +84,6 @@ void main(
   r3.xy = r1.xz * r1.yy;
   r2.xy = v1.xy + r2.xy;
   r4.xyzw = t0.Sample(s0_s, r2.xy).xyzw;
-
-  //float3 untonemapped = r4.rgb;
-
   r2.xy = v1.xy + r2.zw;
   r1.xy = r1.xz * r1.yy + r2.xy;
   r1.xyzw = t0.Sample(s0_s, r1.xy).xyzw;
@@ -116,7 +119,7 @@ void main(
     r0.z = cmp(0.5 >= r0.z);
     r0.z = r0.z ? 0.999989986 : -1;
     r3.y = cb1[26].z * r0.z + r0.y;
-    r5.xyzw = t4.Sample(s3_s, r3.xy).xyzw;
+    r5.xyzw = t5.Sample(s3_s, r3.xy).xyzw;
     r3.xyz = log2(abs(r5.xyz));
     r3.xyz = float3(0.333333343, 0.333333343, 0.333333343) * r3.xyz;
     r3.xyz = exp2(r3.xyz);
@@ -135,7 +138,7 @@ void main(
     r4.yzw = r0.www ? r4.yzw : r3.xyz;
     if (r1.z != 0) {
       r0.zw = r0.xy * cb1[20].xy + cb1[20].zw;
-      r5.xyzw = t5.Sample(s0_s, r0.zw).xyzw;
+      r5.xyzw = t6.Sample(s0_s, r0.zw).xyzw;
       r1.xzw = cb1[21].yyy * r5.xyz;
       r4.yzw = r1.xzw * r3.xyz + r4.yzw;
     }
@@ -148,8 +151,6 @@ void main(
     r2.y = r1.y;
     o0.w = r3.w;
   }
-
-  // possibly vignette
   r0.z = cmp(0 < cb1[7].z);
   if (r0.z != 0) {
     r0.xy = -cb1[7].xy + r0.xy;
@@ -165,7 +166,7 @@ void main(
     r0.xyz = r0.xxx * r0.yzw + cb1[6].xyz;
     r2.xyz = r2.xyz * r0.xyz;
   }
-  float3 untonemapped = r2.xyz;
+  float3 untonemapped = r2.rgb;
 
   renodx::lut::Config lut_config = renodx::lut::config::Create(
       s0_s,
@@ -245,8 +246,48 @@ void main(
     r1.yzw = cb1[13].xxx * r1.yzw;
     r0.xyz = r1.yzw * r1.xxx + r0.xyz;
   }
-  // o0.xyz = saturate(r0.xyz);
-  o0.xyz = r0.xyz;
+  r0.w = r0.x + r0.y;
+  r0.w = r0.w + r0.z;
+  r1.x = 0.333333343 * r0.w;
+  r0.xyz = -r0.www * float3(0.333333343, 0.333333343, 0.333333343) + r0.xyz;
+  r0.xyz = r0.xyz * cb2[0].www + r1.xxx;
+  // r1.xyz = saturate(r0.xyz);
+  r1.xyz = r0.xyz;
+  r1.xyz = float3(1, 1, 1) + -r1.xyz;
+  r1.xyz = r1.xyz + -r0.xyz;
+  r0.xyz = cb2[1].www * r1.xyz + r0.xyz;
+  r0.w = saturate(dot(r0.xyz, float3(0.212672904, 0.715152204, 0.0721750036)));
+  r0.w = -cb2[2].y + r0.w;
+  r0.w = saturate(cb2[2].z * r0.w);
+  r1.xyz = cb2[1].xyz + -cb2[0].xyz;
+  r1.xyz = r0.www * r1.xyz + cb2[0].xyz;
+  r1.xyz = r1.xyz + -r0.xyz;
+  // r0.xyz = saturate(cb2[2].xxx * r1.xyz + r0.xyz);
+  r0.xyz = (cb2[2].xxx * r1.xyz + r0.xyz);
+  r0.w = cmp(0.5 < cb2[2].w);
+  if (r0.w != 0) {
+    r1.xyzw = t3.Sample(s0_s, v1.xy).xyzw;
+    r0.w = cmp(cb2[3].w < 0.5);
+    r1.yzw = r1.xxx + r0.xyz;
+    r1.yzw = min(float3(1, 1, 1), r1.yzw);
+    r2.xyz = cb2[3].xyz * r0.xyz;
+    r2.xyz = r2.xyz + r2.xyz;
+    r3.xyz = float3(1, 1, 1) + -r0.xyz;
+    r3.xyz = r3.xyz + r3.xyz;
+    r4.xyz = float3(1, 1, 1) + -cb2[3].xyz;
+    r3.xyz = -r3.xyz * r4.xyz + float3(1, 1, 1);
+    r4.xyz = cmp(float3(0.5, 0.5, 0.5) >= r0.xyz);
+    r5.xyz = r4.xyz ? float3(1, 1, 1) : 0;
+    r4.xyz = r4.xyz ? float3(0, 0, 0) : float3(1, 1, 1);
+    r3.xyz = r4.xyz * r3.xyz;
+    r2.xyz = r5.xyz * r2.xyz + r3.xyz;
+    r2.w = 1 + -r1.x;
+    r2.xyz = r2.xyz * r1.xxx;
+    r2.xyz = r2.www * r0.xyz + r2.xyz;
+    o0.xyz = r0.www ? r1.yzw : r2.xyz;
+  } else {
+    o0.xyz = r0.xyz;
+  }
 
   o0.rgb *= injectedData.toneMapGameNits / injectedData.toneMapUINits;
 

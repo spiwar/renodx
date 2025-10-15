@@ -1,4 +1,4 @@
-#include "./shared.h"
+#include "../shared.h"
 
 // used on ults (Piper) in Shiryu Defense
 // ---- Created with 3Dmigoto v1.4.1 on Mon Jan 20 01:06:01 2025
