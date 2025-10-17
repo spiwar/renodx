@@ -42,24 +42,24 @@ jobs:
         run: cmake --preset clang-x64
 
       - name: Build (x64)
-        run: cmake --build --preset clang-x64-release --verbose
+        run: cmake --build --preset clang-x64-release --verbose --target zenless-zone-zero
 
-      - name: Set up Clang
-        uses: egor-tensin/setup-clang@v1
-        with:
-          version: latest
-          platform: x86
+      #- name: Set up Clang
+      #  uses: egor-tensin/setup-clang@v1
+      #  with:
+      #    version: latest
+      #    platform: x86
 
-      - name: Configure build for x86
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: amd64_x86
+      #- name: Configure build for x86
+      #  uses: ilammy/msvc-dev-cmd@v1
+      #  with:
+      #    arch: amd64_x86
 
-      - name: Configure CMake (x86)
-        run: cmake --preset clang-x86
+      #- name: Configure CMake (x86)
+      #  run: cmake --preset clang-x86
 
-      - name: Build (x86)
-        run: cmake --build --preset clang-x86-release --verbose
+      #- name: Build (x86)
+      #  run: cmake --build --preset clang-x86-release --verbose
 
       - name: Prepare Release folder
         run: md githubrelease
@@ -67,11 +67,11 @@ jobs:
       - name: Copy Binaries (x64)
         run: copy build\release\*.addon64 githubrelease\
 
-      - name: Copy Binaries (x86)
-        run: copy build32\release\*.addon32 githubrelease\
+      #- name: Copy Binaries (x86)
+      #  run: copy build32\release\*.addon32 githubrelease\
 
-      - name: Copy Binaries (Tools)
-        run: copy build\release\*.exe githubrelease\
+      #- name: Copy Binaries (Tools)
+      #  run: copy build\release\*.exe githubrelease\
       
       - name: Copy Binaries (PDBs)
         run: copy build\release\*.pdb githubrelease\
@@ -88,4 +88,5 @@ jobs:
           automatic_release_tag: nightly-${{ env.NOW }}
           title: RenoDX Nightly Build ${{ env.NOW }}
           files: githubrelease/*
+          prerelease: false
 
