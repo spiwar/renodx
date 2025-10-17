@@ -268,13 +268,15 @@ float4 main(
     _295 = _253;
   }
 
-  float3 untonemapped = float3(_293, _294, _295);
+  float3 untonemapped = renodx::color::srgb::Decode(float3(_293, _294, _295));
+
   renodx::lut::Config lut_config = renodx::lut::config::Create(
       s_linear_clamp_sampler,
       1.f,
       0.f,
       renodx::lut::config::type::ARRI_C1000_NO_CUT,
-      renodx::lut::config::type::LINEAR);
+      renodx::lut::config::type::LINEAR,
+      _Lut_Params.xyz);
 
   float3 tonemapped = renodx::lut::Sample(_InternalLut, lut_config, untonemapped);
   float _344 = tonemapped.x;
@@ -311,7 +313,7 @@ float4 main(
   SV_Target.y = _383;
   SV_Target.z = _384;
   SV_Target.w = _254;
-  
-  SV_Target.rgb *= injectedData.toneMapGameNits / injectedData.toneMapUINits;
+
+  SV_Target = renodx::draw::RenderIntermediatePass(SV_Target);
   return SV_Target;
 }

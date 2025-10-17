@@ -1,4 +1,4 @@
-#include "../shared.h"
+#include "../tonemap.hlsl"
 
 // Used during Vital View in Evasive Assists
 // ---- Created with 3Dmigoto v1.4.1 on Sat Jun  7 03:49:32 2025
@@ -274,41 +274,9 @@ void main(
     r6.xyz = r1.www * r6.xyz + cb1[6].xyz;
     r5.xyz = r6.xyz * r5.xyz;
   }
-  float3 untonemapped = r5.xyz;
+  float3 untonemapped = renodx::color::srgb::Decode(r5.xyz);
 
-  renodx::lut::Config lut_config = renodx::lut::config::Create(
-      s0_s,
-      cb1[0].w * injectedData.colorGradeLUTStrength,
-      injectedData.colorGradeLUTScaling,
-      renodx::lut::config::type::SRGB,
-      renodx::lut::config::type::SRGB,
-      cb1[0].xyz  // precompute
-  );
-
-  float vanillaMidGray = renodx::tonemap::unity::BT709(0.18f).x;
-
-  renodx::tonemap::Config config = renodx::tonemap::config::Create();
-  config.type = injectedData.toneMapType;
-  config.peak_nits = injectedData.toneMapPeakNits;
-  config.game_nits = injectedData.toneMapGameNits;
-  config.gamma_correction = injectedData.toneMapGammaCorrection;
-  config.exposure = injectedData.colorGradeExposure;
-  config.highlights = injectedData.colorGradeHighlights;
-  config.shadows = injectedData.colorGradeShadows;
-  config.contrast = injectedData.colorGradeContrast;
-  config.saturation = injectedData.colorGradeSaturation;
-  config.mid_gray_value = vanillaMidGray;
-  config.mid_gray_nits = vanillaMidGray * 100.f;
-  config.reno_drt_dechroma = injectedData.colorGradeBlowout;
-  config.reno_drt_flare = injectedData.colorGradeFlare;
-
-  config.hue_correction_type = renodx::tonemap::config::hue_correction_type::CUSTOM;
-  config.hue_correction_color = lerp(
-      untonemapped,
-      saturate(renodx::tonemap::unity::BT709(untonemapped)),
-      injectedData.toneMapHueCorrection);
-
-  r3.xyz = renodx::tonemap::config::Apply(untonemapped, config, lut_config, t2);
+  r3.xyz = applyUserToneMap(untonemapped, cb1[0], t2, s0_s);
 
   /* Original LUT Sampling
   r5.xyz = saturate(r5.xyz);
@@ -476,6 +444,6 @@ void main(
   r1.xyz = r4.zzz ? r2.xyz : r1.xyz;
   // o0.xyz = saturate(r4.yyy ? r0.yzw : r1.xyz);
   o0.xyz = r4.yyy ? r0.yzw : r1.xyz;
-  o0.rgb *= injectedData.toneMapGameNits / injectedData.toneMapUINits;
+  o0.rgb = renodx::draw::RenderIntermediatePass(o0.xyz);
   return;
 }

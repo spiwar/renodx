@@ -251,7 +251,7 @@ float4 main(
 
   // Game branches with a custom SDR LUT
 
-  if (injectedData.toneMapType != 0) {
+  if (RENODX_TONE_MAP_TYPE != 0) {
     SV_Target.xyz = applyUserToneMap(untonemapped, _UserLut_Params, _UserLut, sampler_UserLut);
     SV_Target.w = 1.0f;
     return SV_Target;

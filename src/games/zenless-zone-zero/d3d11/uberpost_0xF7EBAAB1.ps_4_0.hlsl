@@ -378,7 +378,7 @@ void main(
     r1.xyz = r0.zzz * r1.xyz + cb1[6].xyz;
     r2.xyz = r2.xyz * r1.xyz;
   }
-  float3 untonemapped = r2.xyz;
+  float3 untonemapped = renodx::color::srgb::Decode(r2.xyz);
 
   /*
   // Sample as 2D - ARRI C3 1000 LUT (internal)
@@ -421,9 +421,6 @@ void main(
     r1.xyz = r0.xzw * r0.yyy + r1.xyz;
   }
   // o0.xyz = saturate(r1.xyz);
-  o0.xyz = r1.xyz;
-
-  o0.rgb *= injectedData.toneMapGameNits / injectedData.toneMapUINits;
-
+  o0.xyz = renodx::draw::RenderIntermediatePass(r1.xyz);
   return;
 }

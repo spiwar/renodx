@@ -245,32 +245,9 @@ void main(
     r5.xyz = r1.www * r5.xyz + cb1[6].xyz;
     r7.xyz = r7.xyz * r5.xyz;
   }
-  float3 untonemapped = r7.xyz;
+  float3 untonemapped = renodx::color::srgb::Decode(r7.xyz);
 
-  float vanillaMidGray = renodx::tonemap::unity::BT709(0.18f).x;
-
-  renodx::tonemap::Config config = renodx::tonemap::config::Create();
-  config.type = injectedData.toneMapType;
-  config.peak_nits = injectedData.toneMapPeakNits;
-  config.game_nits = injectedData.toneMapGameNits;
-  config.gamma_correction = injectedData.toneMapGammaCorrection;
-  config.exposure = injectedData.colorGradeExposure;
-  config.highlights = injectedData.colorGradeHighlights;
-  config.shadows = injectedData.colorGradeShadows;
-  config.contrast = injectedData.colorGradeContrast;
-  config.saturation = injectedData.colorGradeSaturation;
-  config.mid_gray_value = vanillaMidGray;
-  config.mid_gray_nits = vanillaMidGray * 100.f;
-  config.reno_drt_dechroma = injectedData.colorGradeBlowout;
-  config.reno_drt_flare = injectedData.colorGradeFlare;
-
-  config.hue_correction_type = renodx::tonemap::config::hue_correction_type::CUSTOM;
-  config.hue_correction_color = lerp(
-      untonemapped,
-      saturate(renodx::tonemap::unity::BT709(untonemapped)),
-      injectedData.toneMapHueCorrection);
-
-  r7.xyz = renodx::tonemap::config::Apply(untonemapped, config);
+  r7.xyz = renodx::draw::ToneMapPass(untonemapped);
 
   r1.w = cmp(0 < cb1[13].x);
   if (r1.w != 0) {
@@ -407,6 +384,6 @@ void main(
   r1.xyz = r4.zzz ? r2.xyz : r1.xyz;
   // o0.xyz = saturate(r4.yyy ? r0.yzw : r1.xyz);
   o0.xyz = r4.yyy ? r0.yzw : r1.xyz;
-  o0.rgb *= injectedData.toneMapGameNits / injectedData.toneMapUINits;
+  o0.rgb = renodx::draw::RenderIntermediatePass(o0.rgb);
   return;
 }

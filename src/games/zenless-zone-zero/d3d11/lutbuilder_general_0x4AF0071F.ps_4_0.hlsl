@@ -254,7 +254,7 @@ void main(
 
   float3 untonemapped = r0.xyz;
 
-  if (injectedData.toneMapType != 0) {
+  if (RENODX_TONE_MAP_TYPE != 0) {
     o0.xyz = applyUserToneMap(untonemapped, cb0[165], t1, s2_s);
     o0.w = 1.0f;
     return;
