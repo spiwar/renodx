@@ -323,6 +323,24 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
     case DLL_PROCESS_ATTACH:
       if (!reshade::register_addon(h_module)) return FALSE;
 
+      // Check if we're a raytracing pipeline using NvAPI SER, it follows this layout:
+      // [0] | TBL | 1885845696336 | TUAV, array_size: 1, binding: 0, count: 1, register: 0, space: 2, visibility: all
+      renodx::mods::shader::on_create_pipeline_layout = [](auto, std::span<reshade::api::pipeline_layout_param> params) {
+        if (params.size() != 1)
+          return true;
+
+        bool has_tbl = std::ranges::any_of(params, [](auto param) {
+          return (param.type == reshade::api::pipeline_layout_param_type::descriptor_table);
+        });
+
+        if (has_tbl && params[0].descriptor_table.ranges->type == reshade::api::descriptor_type::texture_unordered_access_view
+            && params[0].descriptor_table.ranges->dx_register_index == 0
+            && params[0].descriptor_table.ranges->dx_register_space == 2)
+          return false;
+
+        return true;
+      };
+
       renodx::mods::shader::expected_constant_buffer_index = 13;
       renodx::mods::shader::expected_constant_buffer_space = 50;
       renodx::mods::shader::force_pipeline_cloning = true;
@@ -357,13 +375,14 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
                                                                      .usage_include = reshade::api::resource_usage::render_target | reshade::api::resource_usage::unordered_access});*/
 
       //  RGBA8_typeless
-      renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({.old_format = reshade::api::format::r8g8b8a8_typeless,
-                                                                     .new_format = reshade::api::format::r16g16b16a16_float,
-                                                                     .use_resource_view_cloning = true,
-                                                                     .aspect_ratio = renodx::mods::swapchain::SwapChainUpgradeTarget::BACK_BUFFER,
-                                                                     .aspect_ratio_tolerance = 0.02f
-                                                                     //.use_resource_view_hot_swap = true
-                                                                     });
+      renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({
+          .old_format = reshade::api::format::r8g8b8a8_typeless,
+          .new_format = reshade::api::format::r16g16b16a16_float,
+          .use_resource_view_cloning = true,
+          .aspect_ratio = renodx::mods::swapchain::SwapChainUpgradeTarget::BACK_BUFFER,
+          .aspect_ratio_tolerance = 0.02f
+          //.use_resource_view_hot_swap = true
+      });
 
       /*reshade::register_event<reshade::addon_event::draw>(OnDraw);
       reshade::register_event<reshade::addon_event::draw_indexed>(OnDrawIndexed);
