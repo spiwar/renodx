@@ -268,7 +268,7 @@ float4 main(
     _295 = _253;
   }
 
-  float3 untonemapped = renodx::color::srgb::Decode(float3(_293, _294, _295));
+  float3 untonemapped = (float3(_293, _294, _295));
 
   renodx::lut::Config lut_config = renodx::lut::config::Create(
       s_linear_clamp_sampler,

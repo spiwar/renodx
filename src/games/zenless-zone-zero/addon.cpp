@@ -32,11 +32,13 @@ renodx::utils::settings::Settings settings = {
         .key = "toneMapType",
         .binding = &shader_injection.toneMapType,
         .value_type = renodx::utils::settings::SettingValueType::INTEGER,
-        .default_value = 3.f,
+        .default_value = 1.f,
+        .can_reset = true,
         .label = "Tone Mapper",
         .section = "Tone Mapping",
         .tooltip = "Sets the tone mapper type",
-        .labels = {"Vanilla", "None", "ACES", "RenoDRT"},
+        .labels = {"Vanilla", "RenoDRT"},
+        .parse = [](float value) { return value * 3.f; },
     },
     new renodx::utils::settings::Setting{
         .key = "toneMapPeakNits",
@@ -106,7 +108,7 @@ renodx::utils::settings::Settings settings = {
         .parse = [](float value) { return value * 0.01f; },
     },
     new renodx::utils::settings::Setting{
-        .key = "ToneMapHueShift",
+        .key = "toneMapHueShift",
         .binding = &shader_injection.toneMapHueShift,
         .default_value = 50.f,
         .label = "Hue Shift",
@@ -163,7 +165,7 @@ renodx::utils::settings::Settings settings = {
         .parse = [](float value) { return value * 0.02f; },
     },
     new renodx::utils::settings::Setting{
-        .key = "ColorGradeHighlightSaturation",
+        .key = "colorGradeHighlightSaturation",
         .binding = &shader_injection.colorGradeHighlightSaturation,
         .default_value = 50.f,
         .label = "Highlight Saturation",
@@ -215,7 +217,7 @@ renodx::utils::settings::Settings settings = {
         .parse = [](float value) { return value * 0.01f; },
     },
     new renodx::utils::settings::Setting{
-        .key = "swapChainCustomColorSpace",
+        .key = "swapchainCustomColorSpace",
         .binding = &shader_injection.swapchainCustomColorSpace,
         .value_type = renodx::utils::settings::SettingValueType::INTEGER,
         .default_value = 0.f,
@@ -236,42 +238,6 @@ renodx::utils::settings::Settings settings = {
         .is_visible = []() { return settings[0]->GetValue() >= 1; },
     },
     new renodx::utils::settings::Setting{
-        .key = "intermediateDecoding",
-        .binding = &shader_injection.swapchainIntermediateEncoding,
-        .value_type = renodx::utils::settings::SettingValueType::INTEGER,
-        .default_value = 0.f,
-        .label = "Intermediate Encoding",
-        .section = "Display Output",
-        .labels = {"Auto", "None", "SRGB", "2.2", "2.4"},
-        .is_enabled = []() { return shader_injection.toneMapType >= 1; },
-        .parse = [](float value) {
-            if (value == 0) return shader_injection.toneMapGammaCorrection + 1.f;
-            return value - 1.f; },
-    },
-    new renodx::utils::settings::Setting{
-        .key = "swapchainDecoding",
-        .binding = &shader_injection.swapchainDecoding,
-        .value_type = renodx::utils::settings::SettingValueType::INTEGER,
-        .default_value = 0.f,
-        .label = "Swapchain Decoding",
-        .section = "Display Output",
-        .labels = {"Auto", "None", "SRGB", "2.2", "2.4"},
-        .is_enabled = []() { return shader_injection.toneMapType >= 1; },
-        .parse = [](float value) {
-            if (value == 0) return shader_injection.swapchainIntermediateEncoding;
-            return value - 1.f; },
-    },
-    new renodx::utils::settings::Setting{
-        .key = "swapchainGammaCorrection",
-        .binding = &shader_injection.swapchainGammaCorrection,
-        .value_type = renodx::utils::settings::SettingValueType::INTEGER,
-        .default_value = 0.f,
-        .label = "Gamma Correction",
-        .section = "Display Output",
-        .labels = {"None", "2.2", "2.4"},
-        .is_enabled = []() { return shader_injection.toneMapType >= 1; },
-    },
-        new renodx::utils::settings::Setting{
         .key = "swapchainClampColorSpace",
         .binding = &shader_injection.swapchainClampColorSpace,
         .value_type = renodx::utils::settings::SettingValueType::INTEGER,
@@ -313,26 +279,6 @@ renodx::utils::settings::Settings settings = {
         },
     },
     new renodx::utils::settings::Setting{
-        .value_type = renodx::utils::settings::SettingValueType::BUTTON,
-        .label = "ShortFuse's Ko-Fi",
-        .section = "About",
-        .group = "button-line-1",
-        .tint = 0xFF5F5F,
-        .on_change = []() {
-          ShellExecute(0, "open", "https://ko-fi.com/shortfuse", 0, 0, SW_SHOW);
-        },
-    },
-    new renodx::utils::settings::Setting{
-        .value_type = renodx::utils::settings::SettingValueType::BUTTON,
-        .label = "HDR Den's Ko-Fi",
-        .section = "About",
-        .group = "button-line-1",
-        .tint = 0xFF5F5F,
-        .on_change = []() {
-          ShellExecute(0, "open", "https://ko-fi.com/hdrden", 0, 0, SW_SHOW);
-        },
-    },
-    new renodx::utils::settings::Setting{
         .value_type = renodx::utils::settings::SettingValueType::TEXT,
         .label = "This build was compiled on " + build_date + " at " + build_time + ".",
         .section = "About",
@@ -345,14 +291,17 @@ void OnPresetOff() {
   renodx::utils::settings::UpdateSetting("toneMapGameNits", 203.f);
   renodx::utils::settings::UpdateSetting("toneMapUINits", 203.f);
   renodx::utils::settings::UpdateSetting("toneMapGammaCorrection", 0);
+  renodx::utils::settings::UpdateSetting("toneMapHueProcessor", 0);
+  renodx::utils::settings::UpdateSetting("toneMapHueCorrection", 0);
+  renodx::utils::settings::UpdateSetting("toneMapHueShift", 0);
   renodx::utils::settings::UpdateSetting("colorGradeExposure", 1.f);
   renodx::utils::settings::UpdateSetting("colorGradeHighlights", 50.f);
   renodx::utils::settings::UpdateSetting("colorGradeShadows", 50.f);
   renodx::utils::settings::UpdateSetting("colorGradeContrast", 50.f);
   renodx::utils::settings::UpdateSetting("colorGradeSaturation", 50.f);
+  renodx::utils::settings::UpdateSetting("colorGradeHighlightSaturation", 50.f);
   renodx::utils::settings::UpdateSetting("colorGradeLUTStrength", 100.f);
   renodx::utils::settings::UpdateSetting("colorGradeLUTScaling", 0.f);
-  renodx::utils::settings::UpdateSetting("processingInternalSampling", 0.f);
 }
 
 bool HandlePreDraw(reshade::api::command_list* cmd_list, bool is_dispatch = false) {

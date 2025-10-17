@@ -378,7 +378,7 @@ void main(
     r1.xyz = r0.zzz * r1.xyz + cb1[6].xyz;
     r2.xyz = r2.xyz * r1.xyz;
   }
-  float3 untonemapped = renodx::color::srgb::Decode(r2.xyz);
+  float3 untonemapped = (r2.xyz);
 
   /*
   // Sample as 2D - ARRI C3 1000 LUT (internal)

@@ -274,7 +274,7 @@ void main(
     r6.xyz = r1.www * r6.xyz + cb1[6].xyz;
     r5.xyz = r6.xyz * r5.xyz;
   }
-  float3 untonemapped = renodx::color::srgb::Decode(r5.xyz);
+  float3 untonemapped = (r5.xyz);
 
   r3.xyz = applyUserToneMap(untonemapped, cb1[0], t2, s0_s);
 

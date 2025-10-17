@@ -237,7 +237,7 @@ void main(
     r0.xyz = r0.xxx * r0.yzw + cb1[6].xyz;
     r1.xyz = r1.xyz * r0.xyz;
   }
-  float3 untonemapped = renodx::color::srgb::Decode(r1.xyz);
+  float3 untonemapped = (r1.xyz);
 
   r1.xyz = renodx::draw::ToneMapPass(untonemapped);
 
