@@ -376,19 +376,17 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
       // Check if we're a raytracing pipeline using NvAPI SER, it follows this layout:
       // [0] | TBL | 1885845696336 | TUAV, array_size: 1, binding: 0, count: 1, register: 0, space: 2, visibility: all
       renodx::mods::shader::on_create_pipeline_layout = [](auto, std::span<reshade::api::pipeline_layout_param> params) {
-        if (params.size() != 1)
+        if (params.size() != 1) {
           return true;
+        }
 
         bool has_tbl = std::ranges::any_of(params, [](auto param) {
           return (param.type == reshade::api::pipeline_layout_param_type::descriptor_table);
         });
 
-        if (has_tbl && params[0].descriptor_table.ranges->type == reshade::api::descriptor_type::texture_unordered_access_view
-            && params[0].descriptor_table.ranges->dx_register_index == 0
-            && params[0].descriptor_table.ranges->dx_register_space == 2)
-          return false;
-
-        return true;
+        return !has_tbl || params[0].descriptor_table.ranges->type != reshade::api::descriptor_type::texture_unordered_access_view
+               || params[0].descriptor_table.ranges->dx_register_index != 0
+               || params[0].descriptor_table.ranges->dx_register_space != 2;
       };
 
       renodx::mods::shader::expected_constant_buffer_index = 13;
@@ -399,9 +397,6 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
       renodx::mods::swapchain::expected_constant_buffer_space = 50;
 
       renodx::mods::swapchain::use_resource_cloning = true;
-      renodx::mods::swapchain::use_resize_buffer = true;
-      renodx::mods::swapchain::use_resize_buffer_on_set_full_screen = true;
-      renodx::mods::swapchain::use_resize_buffer_on_present = true;
       renodx::mods::swapchain::swap_chain_proxy_shaders = {
           {
               reshade::api::device_api::d3d11,
