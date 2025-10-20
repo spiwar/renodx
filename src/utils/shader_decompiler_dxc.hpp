@@ -2969,6 +2969,11 @@ class Decompiler {
         auto [type, a, b] = StringViewMatch<3>(assignment, std::regex{R"(udiv (\S+) (\S+), (\S+))"});
         assignment_type = "int";
         assignment_value = std::format("{} / {}", ParseInt(a), ParseInt(b));
+      } else if (instruction == "sdiv") {
+        // %2234 = sdiv i32 %2228, %2220
+        auto [type, a, b] = StringViewMatch<3>(assignment, std::regex{R"(sdiv (\S+) (\S+), (\S+))"});
+        assignment_type = "int";
+        assignment_value = std::format("{} / {}", ParseInt(a), ParseInt(b));
       } else if (instruction == "or") {
         auto [type, a, b] = StringViewMatch<3>(assignment, std::regex{R"(or (\S+) (\S+), (\S+))"});
         if (type == "i1") {
