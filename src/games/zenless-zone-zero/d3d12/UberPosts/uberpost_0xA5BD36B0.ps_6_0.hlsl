@@ -162,10 +162,9 @@ SamplerState sampler_CameraDistortionTextureOverlay : register(s2);
 SamplerState sampler_NapBloomTex : register(s3);
 
 float4 main(
-  noperspective float4 SV_Position : SV_Position,
-  linear float2 TEXCOORD : TEXCOORD,
-  linear float4 TEXCOORD_1 : TEXCOORD1
-) : SV_Target {
+    noperspective float4 SV_Position: SV_Position,
+    linear float2 TEXCOORD: TEXCOORD,
+    linear float4 TEXCOORD_1: TEXCOORD1) : SV_Target {
   float4 SV_Target;
   float _49;
   float _50;
@@ -322,15 +321,15 @@ float4 main(
   float _416 = (((1.0f - saturate(_399)) - _399) * UberPostColorCorrectionPacked1.w) + _399;
   float _417 = (((1.0f - saturate(_400)) - _400) * UberPostColorCorrectionPacked1.w) + _400;
   float _425 = saturate((saturate(dot(float3(_415, _416, _417), float3(0.2126729041337967f, 0.7151522040367126f, 0.07217500358819962f))) - UberPostColorCorrectionPacked2.y) * UberPostColorCorrectionPacked2.z);
-  float _451 = saturate((((UberPostColorCorrectionPacked0.x - _415) + ((UberPostColorCorrectionPacked1.x - UberPostColorCorrectionPacked0.x) * _425)) * UberPostColorCorrectionPacked2.x) + _415);
-  float _452 = saturate((((UberPostColorCorrectionPacked0.y - _416) + ((UberPostColorCorrectionPacked1.y - UberPostColorCorrectionPacked0.y) * _425)) * UberPostColorCorrectionPacked2.x) + _416);
-  float _453 = saturate((((UberPostColorCorrectionPacked0.z - _417) + ((UberPostColorCorrectionPacked1.z - UberPostColorCorrectionPacked0.z) * _425)) * UberPostColorCorrectionPacked2.x) + _417);
+  float _451 = (((UberPostColorCorrectionPacked0.x - _415) + ((UberPostColorCorrectionPacked1.x - UberPostColorCorrectionPacked0.x) * _425)) * UberPostColorCorrectionPacked2.x) + _415;
+  float _452 = (((UberPostColorCorrectionPacked0.y - _416) + ((UberPostColorCorrectionPacked1.y - UberPostColorCorrectionPacked0.y) * _425)) * UberPostColorCorrectionPacked2.x) + _416;
+  float _453 = (((UberPostColorCorrectionPacked0.z - _417) + ((UberPostColorCorrectionPacked1.z - UberPostColorCorrectionPacked0.z) * _425)) * UberPostColorCorrectionPacked2.x) + _417;
   if (UberPostColorCorrectionPacked2.w > 0.5f) {
     float4 _457 = _FXMaskForScene.Sample(s_linear_clamp_sampler, float2(TEXCOORD.x, TEXCOORD.y));
     if (UberPostColorCorrectionPacked3.w < 0.5f) {
-      _526 = min((_457.x + _451), 1.0f);
-      _527 = min((_457.x + _452), 1.0f);
-      _528 = min((_457.x + _453), 1.0f);
+      _526 = (_457.x + _451);
+      _527 = (_457.x + _452);
+      _528 = (_457.x + _453);
     } else {
       float _494 = select((_451 > 0.5f), 0.0f, 1.0f);
       float _495 = select((_452 > 0.5f), 0.0f, 1.0f);
