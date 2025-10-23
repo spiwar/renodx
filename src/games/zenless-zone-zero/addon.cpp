@@ -304,63 +304,11 @@ void OnPresetOff() {
   renodx::utils::settings::UpdateSetting("colorGradeLUTScaling", 0.f);
 }
 
-bool HandlePreDraw(reshade::api::command_list* cmd_list, bool is_dispatch = false) {
-  auto* shader_state = renodx::utils::shader::GetCurrentState(cmd_list);
-
-  auto pixel_shader_hash = renodx::utils::shader::GetCurrentPixelShaderHash(shader_state);
-  // 0xDF092A7C and 0x2E1A6F79 are used to unclamp the main menu.
-  // 0x9E8F1321 is the first Uberpost used and it's here to unclamp the main game at 0.8 render scale
-  // 0xBB3FD02D is used to unclamp the character portraits
-  // 0x811A49EB is an UI shader and we use it to unclamp the dialog RTV.
-  // 0x7FC3C83A is an Uberpost used on the Map menu screen
-  // 0x28F74247 is an Uberpost on the Agent Archives screen
-  if (
-      !is_dispatch
-      && (pixel_shader_hash == 0x9E8F1321 || pixel_shader_hash == 0x2E1A6F79 || pixel_shader_hash == 0xDF092A7C
-          || pixel_shader_hash == 0xBB3FD02D || pixel_shader_hash == 0x811A49EB || pixel_shader_hash == 0x7FC3C83A
-          || pixel_shader_hash == 0x28F74247)) {
-    auto rtvs = renodx::utils::swapchain::GetRenderTargets(cmd_list);
-
-    bool changed = false;
-    for (auto rtv : rtvs) {
-      if (renodx::mods::swapchain::ActivateCloneHotSwap(cmd_list->get_device(), rtv)) {
-        std::stringstream s;
-        s << "Upgrading RTV: ";
-        s << reinterpret_cast<void*>(rtv.handle);
-        s << ", shader: ";
-        s << PRINT_CRC32(pixel_shader_hash);
-        s << ")";
-        reshade::log::message(reshade::log::level::debug, s.str().c_str());
-
-        changed = true;
-      }
-    }
-    if (changed) {
-      renodx::mods::swapchain::FlushDescriptors(cmd_list);
-    }
+void OnInitDevice(reshade::api::device* device) {
+  if (device->get_api() == reshade::api::device_api::d3d12) {
+    // Only use resource cloning on D3D12 where it is required.
+    renodx::mods::swapchain::swap_chain_upgrade_targets[0].use_resource_view_cloning = true;
   }
-
-  return false;
-}
-
-bool OnDraw(reshade::api::command_list* cmd_list, uint32_t vertex_count,
-            uint32_t instance_count, uint32_t first_vertex, uint32_t first_instance) {
-  return HandlePreDraw(cmd_list);
-}
-
-bool OnDrawIndexed(reshade::api::command_list* cmd_list, uint32_t index_count,
-                   uint32_t instance_count, uint32_t first_index, int32_t vertex_offset, uint32_t first_instance) {
-  return HandlePreDraw(cmd_list);
-}
-
-bool OnDrawOrDispatchIndirect(reshade::api::command_list* cmd_list, reshade::api::indirect_command type,
-                              reshade::api::resource buffer, uint64_t offset, uint32_t draw_count, uint32_t stride) {
-  return HandlePreDraw(cmd_list);
-}
-
-bool OnDispatch(reshade::api::command_list* cmd_list,
-                uint32_t group_count_x, uint32_t group_count_y, uint32_t group_count_z) {
-  return HandlePreDraw(cmd_list, true);
 }
 
 }  // namespace
@@ -422,14 +370,10 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
                                                                      .usage_include = reshade::api::resource_usage::render_target | reshade::api::resource_usage::unordered_access});*/
 
       //  RGBA8_typeless
-      renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({
-          .old_format = reshade::api::format::r8g8b8a8_typeless,
-          .new_format = reshade::api::format::r16g16b16a16_float,
-          .use_resource_view_cloning = true,
-          .aspect_ratio = renodx::mods::swapchain::SwapChainUpgradeTarget::BACK_BUFFER,
-          .aspect_ratio_tolerance = 0.02f
-          //.use_resource_view_hot_swap = true
-      });
+      renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({.old_format = reshade::api::format::r8g8b8a8_typeless,
+                                                                     .new_format = reshade::api::format::r16g16b16a16_float,
+                                                                     .aspect_ratio = renodx::mods::swapchain::SwapChainUpgradeTarget::BACK_BUFFER,
+                                                                     .aspect_ratio_tolerance = 0.02f});
 
       {
         auto* setting = new renodx::utils::settings::Setting{
@@ -456,14 +400,11 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
         settings.push_back(setting);
       }
 
-      /*reshade::register_event<reshade::addon_event::draw>(OnDraw);
-      reshade::register_event<reshade::addon_event::draw_indexed>(OnDrawIndexed);
-      reshade::register_event<reshade::addon_event::draw_or_dispatch_indirect>(OnDrawOrDispatchIndirect);
-      reshade::register_event<reshade::addon_event::dispatch>(OnDispatch);*/
-
+      reshade::register_event<reshade::addon_event::init_device>(OnInitDevice);
       break;
     case DLL_PROCESS_DETACH:
       reshade::unregister_addon(h_module);
+      reshade::unregister_event<reshade::addon_event::init_device>(OnInitDevice);
       break;
   }
 

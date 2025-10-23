@@ -182,6 +182,5 @@ void main(
   }
   // o0.xyz = saturate(r2.xyz);
   o0.rgb = renodx::draw::RenderIntermediatePass(r2.xyz);
-  o0.w = 1;
   return;
 }
