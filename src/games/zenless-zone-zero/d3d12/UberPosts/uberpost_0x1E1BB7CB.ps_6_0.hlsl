@@ -328,7 +328,25 @@ float4 main(
   float _490 = (((UberPostColorCorrectionPacked0.x - _454) + ((UberPostColorCorrectionPacked1.x - UberPostColorCorrectionPacked0.x) * _464)) * UberPostColorCorrectionPacked2.x) + _454;
   float _491 = (((UberPostColorCorrectionPacked0.y - _455) + ((UberPostColorCorrectionPacked1.y - UberPostColorCorrectionPacked0.y) * _464)) * UberPostColorCorrectionPacked2.x) + _455;
   float _492 = (((UberPostColorCorrectionPacked0.z - _456) + ((UberPostColorCorrectionPacked1.z - UberPostColorCorrectionPacked0.z) * _464)) * UberPostColorCorrectionPacked2.x) + _456;
-  // FX Mask
+  // HDR FX Mask Blend
+  float3 result = float3(_490, _491, _492);
+  if (UberPostColorCorrectionPacked2.w > 0.5f) {
+    float m = smoothstep(0.0f, 1.0f, _FXMaskForScene.Sample(s_linear_clamp_sampler, TEXCOORD).x);
+
+    if (UberPostColorCorrectionPacked3.w < 0.5f) {
+      // Simple lighten
+      float3 blend_factor = pow(m, 2.2f);
+      result = result * (1.0f + blend_factor * 0.5f);
+    } else {
+      // Overlay
+      float3 blend = UberPostColorCorrectionPacked3.xyz;
+      result = result * lerp(1.0f, blend * 2.0f, m);
+    }
+  }
+  _565 = result.x;
+  _566 = result.y;
+  _567 = result.z;
+  // FX Mask Original
   /*
   if (UberPostColorCorrectionPacked2.w > 0.5f) {
     float4 _496 = _FXMaskForScene.Sample(s_linear_clamp_sampler, float2(TEXCOORD.x, TEXCOORD.y));
@@ -351,9 +369,6 @@ float4 main(
     _567 = _492;
   }
   */
-  _565 = _490;
-  _566 = _491;
-  _567 = _492;
   SV_Target.x = _565;
   SV_Target.y = _566;
   SV_Target.z = _567;
