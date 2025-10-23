@@ -1,6 +1,6 @@
 #include "../../tonemap.hlsl"
 
-// Primary UberPost (Used in Open World/Most Combat Stages)
+// Pause screen lol
 
 Texture2D<float4> _BlitTex : register(t0);
 
@@ -159,6 +159,7 @@ float4 main(
   linear float4 TEXCOORD_1 : TEXCOORD1
 ) : SV_Target {
   float4 SV_Target;
+  bool _17 = (_DistortionRgbShift.w > 0.0f);
   float _47;
   float _48;
   float _49;
@@ -167,20 +168,23 @@ float4 main(
   float _52;
   float _53;
   float _54;
-  float _239;
-  float _240;
-  float _241;
-  float _251;
-  float _252;
-  float _253;
-  float _254;
-  float _293;
-  float _294;
-  float _295;
-  float _382;
-  float _383;
-  float _384;
-  if (_DistortionRgbShift.w > 0.0f) {
+  float _74;
+  float _75;
+  float _76;
+  float _208;
+  float _209;
+  float _210;
+  float _220;
+  float _221;
+  float _222;
+  float _223;
+  float _262;
+  float _263;
+  float _264;
+  float _390;
+  float _391;
+  float _392;
+  if (_17) {
     float4 _19 = _CameraDistortionTextureOverlay.Sample(sampler_CameraDistortionTextureOverlay, float2(TEXCOORD.x, TEXCOORD.y));
     float _23 = _19.x * 0.10000000149011612f;
     float _24 = _19.y * 0.10000000149011612f;
@@ -204,116 +208,109 @@ float4 main(
     _53 = 0.0f;
     _54 = 0.0f;
   }
-  float _61 = ((TEXCOORD.x * 2.0f) - _ChromaCenter.x) + -0.5f;
-  float _63 = ((TEXCOORD.y * 2.0f) - _ChromaCenter.y) + -0.5f;
-  float _67 = dot(float2(_61, _63), float2(_61, _63)) * -0.3333333432674408f;
-  float _69 = (_67 * _61) * UberPostBasePacked0.z;
-  float _71 = (_67 * _63) * UberPostBasePacked0.z;
-  float _73 = rsqrt(dot(float3(_69, _71, 9.999999747378752e-05f), float3(_69, _71, 9.999999747378752e-05f)));
-  float _80 = UberPostBasePacked0.z * 0.9428090453147888f;
-  float _85 = exp2(log2(sqrt((_69 * _69) + (_71 * _71)) / _80) * _ChromaCenter.z);
-  float _87 = ((_69 * _73) * _80) * _85;
-  float _89 = ((_71 * _73) * _80) * _85;
-  float4 _92 = _BlitTex.Sample(s_linear_clamp_sampler, float2((_49 + TEXCOORD.x), (_50 + TEXCOORD.y)));
-  float4 _98 = _BlitTex.Sample(s_linear_clamp_sampler, float2(((_51 + TEXCOORD.x) + _87), ((_52 + TEXCOORD.y) + _89)));
-  float4 _106 = _BlitTex.Sample(s_linear_clamp_sampler, float2(((_53 + TEXCOORD.x) + (_87 * 2.0f)), ((_54 + TEXCOORD.y) + (_89 * 2.0f))));
-  float4 _108 = _BlitTex.Sample(s_linear_clamp_sampler, float2(_47, _48));
-  bool _116 = (UberPostBasePacked3.y > 0.0f);
-  if ((bool)(UberPostBasePacked3.z < 0.5f) && ((bool)((bool)(UberPostBasePacked3.x > 0.0f) || _116))) {
-    float _126 = fmod(((_ScreenSize.y * _48) * _VREffectsScanlineParams.x), 2.0f);
-    float _134 = (((select((_126 > 1.0f), (2.0f - _126), _126) * 2.0f) + -1.0f) * _VREffectsScanlineParams.z) + _47;
-    float _137 = _ScreenSize.w * _ScreenSize.x;
-    float4 _156 = _NapBloomTex.Sample(sampler_NapBloomTex, float2(_134, ((select(((frac((((_134 + abs(_VREffectsSliceParams.y)) * _137) - (_VREffectsSliceParams.y * _48)) / ((_137 * 2.0f) * _VREffectsSliceParams.x)) * 2.0f) <= 1.0f), 0.9999899864196777f, -1.0f) * _VREffectsSliceParams.z) + _48)));
-    float _193 = ((((-0.699999988079071f - _156.x) + (exp2(log2(abs(_156.x)) * 0.3333333432674408f) * 1.4938015937805176f)) * select((_156.x < 0.30000001192092896f), 0.0f, 1.0f)) + _156.x) * UberPostBasePacked3.x;
-    float _194 = ((((-0.699999988079071f - _156.y) + (exp2(log2(abs(_156.y)) * 0.3333333432674408f) * 1.4938015937805176f)) * select((_156.y < 0.30000001192092896f), 0.0f, 1.0f)) + _156.y) * UberPostBasePacked3.x;
-    float _195 = ((((-0.699999988079071f - _156.z) + (exp2(log2(abs(_156.z)) * 0.3333333432674408f) * 1.4938015937805176f)) * select((_156.z < 0.30000001192092896f), 0.0f, 1.0f)) + _156.z) * UberPostBasePacked3.x;
-    float _196 = dot(float3(_92.x, _98.y, _106.z), float3(0.29899999499320984f, 0.5870000123977661f, 0.11400000005960464f));
-    bool _199 = (UberPostBasePacked4.x > 0.5f);
-    float _212 = select(_199, ((((_193 * _196) - _193) * _108.w) + _193), _193);
-    float _213 = select(_199, ((((_194 * _196) - _194) * _108.w) + _194), _194);
-    float _214 = select(_199, ((((_195 * _196) - _195) * _108.w) + _195), _195);
+  if (_17) {
+    float4 _58 = _BlitTex.Sample(s_linear_clamp_sampler, float2((_49 + TEXCOORD.x), (_50 + TEXCOORD.y)));
+    float4 _62 = _BlitTex.Sample(s_linear_clamp_sampler, float2((_51 + TEXCOORD.x), (_52 + TEXCOORD.y)));
+    float4 _66 = _BlitTex.Sample(s_linear_clamp_sampler, float2((_53 + TEXCOORD.x), (_54 + TEXCOORD.y)));
+    _74 = _58.x;
+    _75 = _62.y;
+    _76 = _66.z;
+  } else {
+    float4 _69 = _BlitTex.Sample(s_linear_clamp_sampler, float2(_47, _48));
+    _74 = _69.x;
+    _75 = _69.y;
+    _76 = _69.z;
+  }
+  float4 _77 = _BlitTex.Sample(s_linear_clamp_sampler, float2(_47, _48));
+  bool _85 = (UberPostBasePacked3.y > 0.0f);
+  if ((bool)(UberPostBasePacked3.z < 0.5f) && ((bool)((bool)(UberPostBasePacked3.x > 0.0f) || _85))) {
+    float _95 = fmod(((_ScreenSize.y * _48) * _VREffectsScanlineParams.x), 2.0f);
+    float _103 = (((select((_95 > 1.0f), (2.0f - _95), _95) * 2.0f) + -1.0f) * _VREffectsScanlineParams.z) + _47;
+    float _106 = _ScreenSize.w * _ScreenSize.x;
+    float4 _125 = _NapBloomTex.Sample(sampler_NapBloomTex, float2(_103, ((select(((frac((((_103 + abs(_VREffectsSliceParams.y)) * _106) - (_VREffectsSliceParams.y * _48)) / ((_106 * 2.0f) * _VREffectsSliceParams.x)) * 2.0f) <= 1.0f), 0.9999899864196777f, -1.0f) * _VREffectsSliceParams.z) + _48)));
+    float _162 = ((((-0.699999988079071f - _125.x) + (exp2(log2(abs(_125.x)) * 0.3333333432674408f) * 1.4938015937805176f)) * select((_125.x < 0.30000001192092896f), 0.0f, 1.0f)) + _125.x) * UberPostBasePacked3.x;
+    float _163 = ((((-0.699999988079071f - _125.y) + (exp2(log2(abs(_125.y)) * 0.3333333432674408f) * 1.4938015937805176f)) * select((_125.y < 0.30000001192092896f), 0.0f, 1.0f)) + _125.y) * UberPostBasePacked3.x;
+    float _164 = ((((-0.699999988079071f - _125.z) + (exp2(log2(abs(_125.z)) * 0.3333333432674408f) * 1.4938015937805176f)) * select((_125.z < 0.30000001192092896f), 0.0f, 1.0f)) + _125.z) * UberPostBasePacked3.x;
+    float _165 = dot(float3(_74, _75, _76), float3(0.29899999499320984f, 0.5870000123977661f, 0.11400000005960464f));
+    bool _168 = (UberPostBasePacked4.x > 0.5f);
+    float _181 = select(_168, ((((_162 * _165) - _162) * _77.w) + _162), _162);
+    float _182 = select(_168, ((((_163 * _165) - _163) * _77.w) + _163), _163);
+    float _183 = select(_168, ((((_164 * _165) - _164) * _77.w) + _164), _164);
     do {
-      if (_116) {
-        float4 _225 = _DirtTex.Sample(s_linear_clamp_sampler, float2(((_DirtTexTillingOffset.x * _47) + _DirtTexTillingOffset.z), ((_DirtTexTillingOffset.y * _48) + _DirtTexTillingOffset.w)));
-        _239 = (((_225.x * _193) * UberPostBasePacked3.y) + _212);
-        _240 = (((_225.y * _194) * UberPostBasePacked3.y) + _213);
-        _241 = (((_225.z * _195) * UberPostBasePacked3.y) + _214);
+      if (_85) {
+        float4 _194 = _DirtTex.Sample(s_linear_clamp_sampler, float2(((_DirtTexTillingOffset.x * _47) + _DirtTexTillingOffset.z), ((_DirtTexTillingOffset.y * _48) + _DirtTexTillingOffset.w)));
+        _208 = (((_194.x * _162) * UberPostBasePacked3.y) + _181);
+        _209 = (((_194.y * _163) * UberPostBasePacked3.y) + _182);
+        _210 = (((_194.z * _164) * UberPostBasePacked3.y) + _183);
       } else {
-        _239 = _212;
-        _240 = _213;
-        _241 = _214;
+        _208 = _181;
+        _209 = _182;
+        _210 = _183;
       }
-      _251 = (_239 + _92.x);
-      _252 = (_240 + _98.y);
-      _253 = (_241 + _106.z);
-      _254 = saturate((((_240 + _239) + _241) * 0.33329999446868896f) + _108.w);
+      _220 = (_208 + _74);
+      _221 = (_209 + _75);
+      _222 = (_210 + _76);
+      _223 = saturate((((_209 + _208) + _210) * 0.33329999446868896f) + _77.w);
     } while (false);
   } else {
-    _251 = _92.x;
-    _252 = _98.y;
-    _253 = _106.z;
-    _254 = _108.w;
+    _220 = _74;
+    _221 = _75;
+    _222 = _76;
+    _223 = _77.w;
   }
   [branch]
   if (_Vignette_Params2.z > 0.0f) {
-    float _271 = abs(_48 - _Vignette_Params2.y) * _Vignette_Params2.z;
-    float _273 = (_Vignette_Params2.z * _Vignette_Params1.w) * abs(_47 - _Vignette_Params2.x);
-    float _279 = exp2(log2(saturate(1.0f - dot(float2(_273, _271), float2(_273, _271)))) * _Vignette_Params2.w);
-    _293 = (((_279 * (1.0f - _Vignette_Params1.x)) + _Vignette_Params1.x) * _251);
-    _294 = (((_279 * (1.0f - _Vignette_Params1.y)) + _Vignette_Params1.y) * _252);
-    _295 = (((_279 * (1.0f - _Vignette_Params1.z)) + _Vignette_Params1.z) * _253);
+    float _240 = abs(_48 - _Vignette_Params2.y) * _Vignette_Params2.z;
+    float _242 = (_Vignette_Params2.z * _Vignette_Params1.w) * abs(_47 - _Vignette_Params2.x);
+    float _248 = exp2(log2(saturate(1.0f - dot(float2(_242, _240), float2(_242, _240)))) * _Vignette_Params2.w);
+    _262 = (((_248 * (1.0f - _Vignette_Params1.x)) + _Vignette_Params1.x) * _220);
+    _263 = (((_248 * (1.0f - _Vignette_Params1.y)) + _Vignette_Params1.y) * _221);
+    _264 = (((_248 * (1.0f - _Vignette_Params1.z)) + _Vignette_Params1.z) * _222);
   } else {
-    _293 = _251;
-    _294 = _252;
-    _295 = _253;
+    _262 = _220;
+    _263 = _221;
+    _264 = _222;
   }
+  float3 untonemapped = (float3(_262, _263, _264));
 
-  float3 untonemapped = (float3(_293, _294, _295));
+  float3 tonemapped = applyUserToneMap(untonemapped, _Lut_Params, _InternalLut, s_linear_clamp_sampler);
 
-  renodx::lut::Config lut_config = renodx::lut::config::Create(
-      s_linear_clamp_sampler,
-      1.f,
-      0.f,
-      renodx::lut::config::type::ARRI_C1000_NO_CUT,
-      renodx::lut::config::type::LINEAR,
-      _Lut_Params.xyz);
-
-  float3 tonemapped = renodx::lut::Sample(_InternalLut, lut_config, untonemapped);
-  float _344 = tonemapped.x;
-  float _345 = tonemapped.y;
-  float _346 = tonemapped.z;
-
-  /*float _318 = saturate((log2((_295 * 5.555555820465088f) + 0.047995999455451965f) * 0.07349978387355804f) + 0.3860360085964203f) * _Lut_Params.z;
-  float _319 = floor(_318);
-  float _325 = ((saturate((log2((_294 * 5.555555820465088f) + 0.047995999455451965f) * 0.07349978387355804f) + 0.3860360085964203f) * _Lut_Params.z) + 0.5f) * _Lut_Params.y;
-  float _327 = (_319 * _Lut_Params.y) + (((saturate((log2((_293 * 5.555555820465088f) + 0.047995999455451965f) * 0.07349978387355804f) + 0.3860360085964203f) * _Lut_Params.z) + 0.5f) * _Lut_Params.x);
-  float _328 = _318 - _319;
-  float4 _330 = _InternalLut.SampleLevel(s_linear_clamp_sampler, float2((_327 + _Lut_Params.y), _325), 0.0f);
-  float4 _334 = _InternalLut.SampleLevel(s_linear_clamp_sampler, float2(_327, _325), 0.0f);
-  float _344 = ((_330.x - _334.x) * _328) + _334.x;
-  float _345 = ((_330.y - _334.y) * _328) + _334.y;
-  float _346 = ((_330.z - _334.z) * _328) + _334.z;*/
-
+  float _352 = tonemapped.x;
+  float _353 = tonemapped.y;
+  float _354 = tonemapped.z;
+  /*
+  float _269 = saturate(_262);
+  float _270 = saturate(_263);
+  float _271 = saturate(_264);
+  float _299 = select((_271 <= 0.0031308000907301903f), (_271 * 12.920000076293945f), ((exp2(log2(abs(_271)) * 0.4166666567325592f) * 1.0549999475479126f) + -0.054999999701976776f)) * _Lut_Params.z;
+  float _300 = floor(_299);
+  float _306 = ((select((_270 <= 0.0031308000907301903f), (_270 * 12.920000076293945f), ((exp2(log2(abs(_270)) * 0.4166666567325592f) * 1.0549999475479126f) + -0.054999999701976776f)) * _Lut_Params.z) + 0.5f) * _Lut_Params.y;
+  float _308 = (((select((_269 <= 0.0031308000907301903f), (_269 * 12.920000076293945f), ((exp2(log2(abs(_269)) * 0.4166666567325592f) * 1.0549999475479126f) + -0.054999999701976776f)) * _Lut_Params.z) + 0.5f) * _Lut_Params.x) + (_300 * _Lut_Params.y);
+  float _309 = _299 - _300;
+  float4 _311 = _InternalLut.SampleLevel(s_linear_clamp_sampler, float2((_308 + _Lut_Params.y), _306), 0.0f);
+  float4 _315 = _InternalLut.SampleLevel(s_linear_clamp_sampler, float2(_308, _306), 0.0f);
+  float _325 = ((_311.x - _315.x) * _309) + _315.x;
+  float _326 = ((_311.y - _315.y) * _309) + _315.y;
+  float _327 = ((_311.z - _315.z) * _309) + _315.z;
+  float _352 = select((_325 <= 0.040449999272823334f), (_325 * 0.07739938050508499f), exp2(log2(abs((_325 + 0.054999999701976776f) * 0.9478673338890076f)) * 2.4000000953674316f));
+  float _353 = select((_326 <= 0.040449999272823334f), (_326 * 0.07739938050508499f), exp2(log2(abs((_326 + 0.054999999701976776f) * 0.9478673338890076f)) * 2.4000000953674316f));
+  float _354 = select((_327 <= 0.040449999272823334f), (_327 * 0.07739938050508499f), exp2(log2(abs((_327 + 0.054999999701976776f) * 0.9478673338890076f)) * 2.4000000953674316f));*/
   if (UberPostBasePacked1.x > 0.0f) {
-    float4 _361 = _Grain_Texture.Sample(s_linear_repeat_sampler, float2(((_Grain_TilingParams.x * TEXCOORD.x) + _Grain_TilingParams.z), ((_Grain_TilingParams.y * TEXCOORD.y) + _Grain_TilingParams.w)));
-    float _364 = (_361.w + -0.5f) * 2.0f;
-    float _368 = 1.0f - (sqrt(dot(float3(_344, _345, _346), float3(0.2126729041337967f, 0.7151522040367126f, 0.07217500358819962f))) * UberPostBasePacked1.y);
-    _382 = ((((UberPostBasePacked1.x * _344) * _364) * _368) + _344);
-    _383 = ((((UberPostBasePacked1.x * _345) * _364) * _368) + _345);
-    _384 = ((((UberPostBasePacked1.x * _346) * _364) * _368) + _346);
+    float4 _369 = _Grain_Texture.Sample(s_linear_repeat_sampler, float2(((_Grain_TilingParams.x * TEXCOORD.x) + _Grain_TilingParams.z), ((_Grain_TilingParams.y * TEXCOORD.y) + _Grain_TilingParams.w)));
+    float _372 = (_369.w + -0.5f) * 2.0f;
+    float _376 = 1.0f - (sqrt(dot(float3(_352, _353, _354), float3(0.2126729041337967f, 0.7151522040367126f, 0.07217500358819962f))) * UberPostBasePacked1.y);
+    _390 = ((((UberPostBasePacked1.x * _352) * _372) * _376) + _352);
+    _391 = ((((UberPostBasePacked1.x * _353) * _372) * _376) + _353);
+    _392 = ((((UberPostBasePacked1.x * _354) * _372) * _376) + _354);
   } else {
-    _382 = _344;
-    _383 = _345;
-    _384 = _346;
+    _390 = _352;
+    _391 = _353;
+    _392 = _354;
   }
-  /*SV_Target.x = saturate(_382);
-  SV_Target.y = saturate(_383);
-  SV_Target.z = saturate(_384);*/
-  SV_Target.x = _382;
-  SV_Target.y = _383;
-  SV_Target.z = _384;
-  SV_Target.w = _254;
-
+  SV_Target.x = _390;
+  SV_Target.y = _391;
+  SV_Target.z = _392;
+  SV_Target.w = _223;
   SV_Target.xyz = renodx::draw::RenderIntermediatePass(SV_Target.xyz);
   return SV_Target;
 }

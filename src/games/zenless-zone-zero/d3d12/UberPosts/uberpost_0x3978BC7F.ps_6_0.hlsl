@@ -1,7 +1,6 @@
 #include "../../tonemap.hlsl"
 
-// Primary UberPost (Used in Open World/Most Combat Stages)
-
+// VR Training Uberpost
 Texture2D<float4> _BlitTex : register(t0);
 
 Texture2D<float4> _Grain_Texture : register(t1);
@@ -154,10 +153,9 @@ SamplerState sampler_CameraDistortionTextureOverlay : register(s2);
 SamplerState sampler_NapBloomTex : register(s3);
 
 float4 main(
-  noperspective float4 SV_Position : SV_Position,
-  linear float2 TEXCOORD : TEXCOORD,
-  linear float4 TEXCOORD_1 : TEXCOORD1
-) : SV_Target {
+    noperspective float4 SV_Position: SV_Position,
+    linear float2 TEXCOORD: TEXCOORD,
+    linear float4 TEXCOORD_1: TEXCOORD1) : SV_Target {
   float4 SV_Target;
   float _47;
   float _48;
@@ -177,9 +175,9 @@ float4 main(
   float _293;
   float _294;
   float _295;
-  float _382;
-  float _383;
-  float _384;
+  float _421;
+  float _422;
+  float _423;
   if (_DistortionRgbShift.w > 0.0f) {
     float4 _19 = _CameraDistortionTextureOverlay.Sample(sampler_CameraDistortionTextureOverlay, float2(TEXCOORD.x, TEXCOORD.y));
     float _23 = _19.x * 0.10000000149011612f;
@@ -270,50 +268,48 @@ float4 main(
 
   float3 untonemapped = (float3(_293, _294, _295));
 
-  renodx::lut::Config lut_config = renodx::lut::config::Create(
-      s_linear_clamp_sampler,
-      1.f,
-      0.f,
-      renodx::lut::config::type::ARRI_C1000_NO_CUT,
-      renodx::lut::config::type::LINEAR,
-      _Lut_Params.xyz);
+  float3 tonemapped = applyUserToneMap(untonemapped, _Lut_Params, _InternalLut, s_linear_clamp_sampler);
 
-  float3 tonemapped = renodx::lut::Sample(_InternalLut, lut_config, untonemapped);
-  float _344 = tonemapped.x;
-  float _345 = tonemapped.y;
-  float _346 = tonemapped.z;
+  float _383 = tonemapped.x;
+  float _384 = tonemapped.y;
+  float _385 = tonemapped.z;
+  // InternalLut
 
-  /*float _318 = saturate((log2((_295 * 5.555555820465088f) + 0.047995999455451965f) * 0.07349978387355804f) + 0.3860360085964203f) * _Lut_Params.z;
-  float _319 = floor(_318);
-  float _325 = ((saturate((log2((_294 * 5.555555820465088f) + 0.047995999455451965f) * 0.07349978387355804f) + 0.3860360085964203f) * _Lut_Params.z) + 0.5f) * _Lut_Params.y;
-  float _327 = (_319 * _Lut_Params.y) + (((saturate((log2((_293 * 5.555555820465088f) + 0.047995999455451965f) * 0.07349978387355804f) + 0.3860360085964203f) * _Lut_Params.z) + 0.5f) * _Lut_Params.x);
-  float _328 = _318 - _319;
-  float4 _330 = _InternalLut.SampleLevel(s_linear_clamp_sampler, float2((_327 + _Lut_Params.y), _325), 0.0f);
-  float4 _334 = _InternalLut.SampleLevel(s_linear_clamp_sampler, float2(_327, _325), 0.0f);
-  float _344 = ((_330.x - _334.x) * _328) + _334.x;
-  float _345 = ((_330.y - _334.y) * _328) + _334.y;
-  float _346 = ((_330.z - _334.z) * _328) + _334.z;*/
-
+  /*float _300 = saturate(_293);
+  float _301 = saturate(_294);
+  float _302 = saturate(_295);
+  float _330 = select((_302 <= 0.0031308000907301903f), (_302 * 12.920000076293945f), ((exp2(log2(abs(_302)) * 0.4166666567325592f) * 1.0549999475479126f) + -0.054999999701976776f)) * _Lut_Params.z;
+  float _331 = floor(_330);
+  float _337 = ((select((_301 <= 0.0031308000907301903f), (_301 * 12.920000076293945f), ((exp2(log2(abs(_301)) * 0.4166666567325592f) * 1.0549999475479126f) + -0.054999999701976776f)) * _Lut_Params.z) + 0.5f) * _Lut_Params.y;
+  float _339 = (((select((_300 <= 0.0031308000907301903f), (_300 * 12.920000076293945f), ((exp2(log2(abs(_300)) * 0.4166666567325592f) * 1.0549999475479126f) + -0.054999999701976776f)) * _Lut_Params.z) + 0.5f) * _Lut_Params.x) + (_331 * _Lut_Params.y);
+  float _340 = _330 - _331;
+  float4 _342 = _InternalLut.SampleLevel(s_linear_clamp_sampler, float2((_339 + _Lut_Params.y), _337), 0.0f);
+  float4 _346 = _InternalLut.SampleLevel(s_linear_clamp_sampler, float2(_339, _337), 0.0f);
+  float _356 = ((_342.x - _346.x) * _340) + _346.x;
+  float _357 = ((_342.y - _346.y) * _340) + _346.y;
+  float _358 = ((_342.z - _346.z) * _340) + _346.z;
+  float _383 = select((_356 <= 0.040449999272823334f), (_356 * 0.07739938050508499f), exp2(log2(abs((_356 + 0.054999999701976776f) * 0.9478673338890076f)) * 2.4000000953674316f));
+  float _384 = select((_357 <= 0.040449999272823334f), (_357 * 0.07739938050508499f), exp2(log2(abs((_357 + 0.054999999701976776f) * 0.9478673338890076f)) * 2.4000000953674316f));
+  float _385 = select((_358 <= 0.040449999272823334f), (_358 * 0.07739938050508499f), exp2(log2(abs((_358 + 0.054999999701976776f) * 0.9478673338890076f)) * 2.4000000953674316f));*/
   if (UberPostBasePacked1.x > 0.0f) {
-    float4 _361 = _Grain_Texture.Sample(s_linear_repeat_sampler, float2(((_Grain_TilingParams.x * TEXCOORD.x) + _Grain_TilingParams.z), ((_Grain_TilingParams.y * TEXCOORD.y) + _Grain_TilingParams.w)));
-    float _364 = (_361.w + -0.5f) * 2.0f;
-    float _368 = 1.0f - (sqrt(dot(float3(_344, _345, _346), float3(0.2126729041337967f, 0.7151522040367126f, 0.07217500358819962f))) * UberPostBasePacked1.y);
-    _382 = ((((UberPostBasePacked1.x * _344) * _364) * _368) + _344);
-    _383 = ((((UberPostBasePacked1.x * _345) * _364) * _368) + _345);
-    _384 = ((((UberPostBasePacked1.x * _346) * _364) * _368) + _346);
+    float4 _400 = _Grain_Texture.Sample(s_linear_repeat_sampler, float2(((_Grain_TilingParams.x * TEXCOORD.x) + _Grain_TilingParams.z), ((_Grain_TilingParams.y * TEXCOORD.y) + _Grain_TilingParams.w)));
+    float _403 = (_400.w + -0.5f) * 2.0f;
+    float _407 = 1.0f - (sqrt(dot(float3(_383, _384, _385), float3(0.2126729041337967f, 0.7151522040367126f, 0.07217500358819962f))) * UberPostBasePacked1.y);
+    _421 = ((((UberPostBasePacked1.x * _383) * _403) * _407) + _383);
+    _422 = ((((UberPostBasePacked1.x * _384) * _403) * _407) + _384);
+    _423 = ((((UberPostBasePacked1.x * _385) * _403) * _407) + _385);
   } else {
-    _382 = _344;
-    _383 = _345;
-    _384 = _346;
+    _421 = _383;
+    _422 = _384;
+    _423 = _385;
   }
-  /*SV_Target.x = saturate(_382);
-  SV_Target.y = saturate(_383);
-  SV_Target.z = saturate(_384);*/
-  SV_Target.x = _382;
-  SV_Target.y = _383;
-  SV_Target.z = _384;
+  /*SV_Target.x = saturate(_421);
+  SV_Target.y = saturate(_422);
+  SV_Target.z = saturate(_423);*/
+  SV_Target.x = _421;
+  SV_Target.y = _422;
+  SV_Target.z = _423;
   SV_Target.w = _254;
-
   SV_Target.xyz = renodx::draw::RenderIntermediatePass(SV_Target.xyz);
   return SV_Target;
 }
