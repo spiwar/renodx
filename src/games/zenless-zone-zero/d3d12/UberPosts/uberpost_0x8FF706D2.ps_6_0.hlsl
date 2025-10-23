@@ -1,5 +1,5 @@
 #include "../../tonemap.hlsl"
-// Uberpost - Letterboxed cutscenes
+// Uberpost - Letterboxed cutscenes, wipeout (shiyu)
 
 Texture2D<float4> _CameraDepthTexture : register(t0);
 
@@ -498,6 +498,6 @@ float4 main(
   SV_Target.y = _1037;
   SV_Target.z = _1038;
   SV_Target.w = _908;
-  SV_Target = renodx::draw::RenderIntermediatePass(SV_Target);
+  SV_Target.xyz = renodx::draw::RenderIntermediatePass(SV_Target.xyz);
   return SV_Target;
 }

@@ -1,5 +1,6 @@
 #include "../../tonemap.hlsl"
 
+// Yixuan sprint (shiyu)
 Texture2D<float4> _CameraDepthTexture : register(t0);
 
 Texture2D<float4> _BlitTex : register(t1);
@@ -607,6 +608,6 @@ float4 main(
   SV_Target.y = _1393;
   SV_Target.z = _1394;
   SV_Target.w = _862;
-  SV_Target = renodx::draw::RenderIntermediatePass(SV_Target);
+  SV_Target.xyz = renodx::draw::RenderIntermediatePass(SV_Target.xyz);
   return SV_Target;
 }

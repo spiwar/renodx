@@ -1,5 +1,6 @@
 #include "../../tonemap.hlsl"
 
+// VR Training Uberpost
 Texture2D<float4> _BlitTex : register(t0);
 
 Texture2D<float4> _Grain_Texture : register(t1);
@@ -309,6 +310,6 @@ float4 main(
   SV_Target.y = _422;
   SV_Target.z = _423;
   SV_Target.w = _254;
-  SV_Target = renodx::draw::RenderIntermediatePass(SV_Target);
+  SV_Target.xyz = renodx::draw::RenderIntermediatePass(SV_Target.xyz);
   return SV_Target;
 }

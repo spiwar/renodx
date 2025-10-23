@@ -291,6 +291,6 @@ float4 main(
   SV_Target.y = _300;
   SV_Target.z = _301;
   SV_Target.w = _222;
-  SV_Target = renodx::draw::RenderIntermediatePass(SV_Target);
+  SV_Target.xyz = renodx::draw::RenderIntermediatePass(SV_Target.xyz);
   return SV_Target;
 }

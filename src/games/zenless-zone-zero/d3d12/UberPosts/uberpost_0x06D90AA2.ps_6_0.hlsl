@@ -1,5 +1,6 @@
 #include "../../tonemap.hlsl"
 
+// Yixuan sprint, defensive assist pulchra (open world)
 Texture2D<float4> _BlitTex : register(t0);
 
 Texture2D<float4> _Grain_Texture : register(t1);
@@ -483,6 +484,6 @@ float4 main(
   SV_Target.y = _935;
   SV_Target.z = _936;
   SV_Target.w = _404;
-  SV_Target = renodx::draw::RenderIntermediatePass(SV_Target);
+  SV_Target.xyz = renodx::draw::RenderIntermediatePass(SV_Target.xyz);
   return SV_Target;
 }

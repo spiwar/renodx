@@ -1,5 +1,5 @@
 #include "../../tonemap.hlsl"
-/// Uberpost - Trigger Aftershock 
+/// Uberpost - Trigger Aftershock (open world)
 Texture2D<float4> _BlitTex : register(t0);
 
 Texture2D<float4> _Grain_Texture : register(t1);
@@ -412,6 +412,6 @@ float4 main(
   SV_Target.y = _566;
   SV_Target.z = _567;
   SV_Target.w = _437;
-  SV_Target = renodx::draw::RenderIntermediatePass(SV_Target);
+  SV_Target.xyz = renodx::draw::RenderIntermediatePass(SV_Target.xyz);
   return SV_Target;
 }
