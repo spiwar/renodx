@@ -318,7 +318,7 @@ extern "C" __declspec(dllexport) constexpr const char* DESCRIPTION = "RenoDX for
 
 BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
   switch (fdw_reason) {
-    case DLL_PROCESS_ATTACH:
+    case DLL_PROCESS_ATTACH: {
       if (!reshade::register_addon(h_module)) return FALSE;
 
       // Check if we're a raytracing pipeline using NvAPI SER, it follows this layout:
@@ -369,11 +369,30 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
                                                                      .use_resource_view_cloning = true,
                                                                      .usage_include = reshade::api::resource_usage::render_target | reshade::api::resource_usage::unordered_access});*/
 
-      //  RGBA8_typeless
+      //  RGBA8_typeless - back buffer aspect ratio (main game)
       renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({.old_format = reshade::api::format::r8g8b8a8_typeless,
                                                                      .new_format = reshade::api::format::r16g16b16a16_float,
                                                                      .aspect_ratio = renodx::mods::swapchain::SwapChainUpgradeTarget::BACK_BUFFER,
                                                                      .aspect_ratio_tolerance = 0.02f});
+
+      // Additional aspect ratios for character menu, dialogs, cutscenes, etc.
+      const std::vector<float> additional_aspect_ratios = {
+          2016.f / 960.f,  // 16:9 and below
+          1750.f / 750.f,  // 19:9
+          1584.f / 624.f,  // 19.5:9
+          1704.f / 624.f,  // 21:9
+          1728.f / 624.f,  // 32:9
+          1.f / 1.f,       // Character portrait
+          2160.f / 1272.f, // Mission finish logo
+      };
+
+      for (const float& ratio : additional_aspect_ratios) {
+        renodx::mods::swapchain::swap_chain_upgrade_targets.push_back({.old_format = reshade::api::format::r8g8b8a8_typeless,
+                                                                        .new_format = reshade::api::format::r16g16b16a16_float,
+                                                                        .aspect_ratio = ratio,
+                                                                        .aspect_ratio_tolerance = 0.02f,
+});
+      }
 
       {
         auto* setting = new renodx::utils::settings::Setting{
@@ -402,6 +421,7 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
 
       reshade::register_event<reshade::addon_event::init_device>(OnInitDevice);
       break;
+    }
     case DLL_PROCESS_DETACH:
       reshade::unregister_addon(h_module);
       reshade::unregister_event<reshade::addon_event::init_device>(OnInitDevice);

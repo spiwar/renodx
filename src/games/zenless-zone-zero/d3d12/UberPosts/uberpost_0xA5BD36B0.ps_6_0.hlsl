@@ -291,6 +291,8 @@ float4 main(
   float _346 = tonemapped.x;
   float _347 = tonemapped.y;
   float _348 = tonemapped.z;
+
+  // ARRI lut
   /*
   float _320 = saturate((log2((_297 * 5.555555820465088f) + 0.047995999455451965f) * 0.07349978387355804f) + 0.3860360085964203f) * _Lut_Params.z;
   float _321 = floor(_320);
@@ -326,30 +328,24 @@ float4 main(
   float _452 = (((UberPostColorCorrectionPacked0.y - _416) + ((UberPostColorCorrectionPacked1.y - UberPostColorCorrectionPacked0.y) * _425)) * UberPostColorCorrectionPacked2.x) + _416;
   float _453 = (((UberPostColorCorrectionPacked0.z - _417) + ((UberPostColorCorrectionPacked1.z - UberPostColorCorrectionPacked0.z) * _425)) * UberPostColorCorrectionPacked2.x) + _417;
   // FX Mask Blend 
- /*
+  float3 result = float3(_451, _452, _453);
   if (UberPostColorCorrectionPacked2.w > 0.5f) {
-    float4 _457 = _FXMaskForScene.Sample(s_linear_clamp_sampler, float2(TEXCOORD.x, TEXCOORD.y));
+    float m = smoothstep(0.0f, 1.0f, _FXMaskForScene.Sample(s_linear_clamp_sampler, TEXCOORD).x);
+
     if (UberPostColorCorrectionPacked3.w < 0.5f) {
-      _526 = min((_457.x + _451), 1.0f);
-      _527 = min((_457.x + _452), 1.0f);
-      _528 = min((_457.x + _453), 1.0f);
+      // Simple lighten
+      float3 blend_factor = pow(m, 2.2f);
+      result = result * (1.0f + blend_factor * 0.5f);
     } else {
-      float _494 = select((_451 > 0.5f), 0.0f, 1.0f);
-      float _495 = select((_452 > 0.5f), 0.0f, 1.0f);
-      float _496 = select((_453 > 0.5f), 0.0f, 1.0f);
-      float _515 = 1.0f - _457.x;
-      _526 = (((((1.0f - (((1.0f - _451) * 2.0f) * (1.0f - UberPostColorCorrectionPacked3.x))) * saturate(1.0f - _494)) + (((_451 * 2.0f) * _494) * UberPostColorCorrectionPacked3.x)) * _457.x) + (_515 * _451));
-      _527 = (((((1.0f - (((1.0f - _452) * 2.0f) * (1.0f - UberPostColorCorrectionPacked3.y))) * saturate(1.0f - _495)) + (((_452 * 2.0f) * _495) * UberPostColorCorrectionPacked3.y)) * _457.x) + (_515 * _452));
-      _528 = (((((1.0f - (((1.0f - _453) * 2.0f) * (1.0f - UberPostColorCorrectionPacked3.z))) * saturate(1.0f - _496)) + (((_453 * 2.0f) * _496) * UberPostColorCorrectionPacked3.z)) * _457.x) + (_515 * _453));
+      // Overlay
+      float3 blend = UberPostColorCorrectionPacked3.xyz;
+      result = result * lerp(1.0f, blend * 2.0f, m);
     }
-  } else {
-    _526 = _451;
-    _527 = _452;
-    _528 = _453;
-  }*/
-  _526 = _451;
-  _527 = _452;
-  _528 = _453;
+  }
+  _526 = result.x;
+  _527 = result.y;
+  _528 = result.z;
+  
   SV_Target.x = _526;
   SV_Target.y = _527;
   SV_Target.z = _528;
