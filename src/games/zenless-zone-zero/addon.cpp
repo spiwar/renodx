@@ -382,7 +382,8 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
           1584.f / 624.f,  // 19.5:9
           1704.f / 624.f,  // 21:9
           1728.f / 624.f,  // 32:9
-          1.f / 1.f,       // 1:1
+          1.f / 1.f,       // Character portrait
+          2160.f / 1272.f, // Mission finish logo
       };
 
       for (const float& ratio : additional_aspect_ratios) {
