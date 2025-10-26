@@ -2440,6 +2440,7 @@ inline bool OnCreateResourceView(
 
   const bool changed = (current_desc.format != new_desc.format);
 
+#ifdef DEBUG_LEVEL_1
   if (changed
 #ifdef DEBUG_LEVEL_1
       || true
@@ -2459,6 +2460,7 @@ inline bool OnCreateResourceView(
     s << ")";
     reshade::log::message(reshade::log::level::info, s.str().c_str());
   };
+#endif
 
   if (!changed) {
     if (!is_back_buffer) return false;
