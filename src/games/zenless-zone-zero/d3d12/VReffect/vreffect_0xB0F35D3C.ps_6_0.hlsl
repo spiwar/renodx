@@ -134,7 +134,7 @@ float4 main(
   //float4 _VR_SourceImage0 = _VR_SourceImage.Sample(s_linear_repeat_sampler, float2(_24, _45));
   float4 _VR_SourceImage0 = renodx::draw::InvertIntermediatePass(_VR_SourceImage.Sample(s_linear_repeat_sampler, float2(_24, _45)));
   float4 untonemapped = _VR_SourceImage0;
-  _VR_SourceImage0.xyz = renodx::tonemap::renodrt::NeutralSDR(_VR_SourceImage0.xyz);
+  _VR_SourceImage0.xyz = renodx::tonemap::dice::BT709(_VR_SourceImage0.xyz, 1.0f, 0.5f);
   float _59 = _24 - _TaaJitterStrength.z;
   float _60 = _45 - _TaaJitterStrength.w;
   float4 _61 = _CameraDepthTexture.SampleLevel(s_point_clamp_sampler, float2(_59, _60), 0.0f);
@@ -544,9 +544,9 @@ float4 main(
   float4 _2149 = _VR_SourceImage.Sample(s_linear_repeat_sampler, float2((_RGBSeparateParams0.x + _24), ((_RGBSeparateParams0.y * _27) + _45)));
   float4 _2164 = _VR_SourceImage.Sample(s_linear_repeat_sampler, float2((_RGBSeparateParams0.z + _24), ((_RGBSeparateParams0.w * _27) + _45)));
   float4 _2179 = _VR_SourceImage.Sample(s_linear_repeat_sampler, float2((_RGBSeparateParams1.x + _24), ((_RGBSeparateParams1.y * _27) + _45)));
-  _2149.xyz = renodx::tonemap::renodrt::NeutralSDR(renodx::draw::InvertIntermediatePass(_2149.xyz));
-  _2164.xyz = renodx::tonemap::renodrt::NeutralSDR(renodx::draw::InvertIntermediatePass(_2164.xyz));
-  _2179.xyz = renodx::tonemap::renodrt::NeutralSDR(renodx::draw::InvertIntermediatePass(_2179.xyz));
+  _2149.xyz = renodx::tonemap::dice::BT709(renodx::draw::InvertIntermediatePass(_2149.xyz), 1.0f, 0.5f);
+  _2164.xyz = renodx::tonemap::dice::BT709(renodx::draw::InvertIntermediatePass(_2164.xyz), 1.0f, 0.5f);
+  _2179.xyz = renodx::tonemap::dice::BT709(renodx::draw::InvertIntermediatePass(_2179.xyz), 1.0f, 0.5f);
   float _2210 = (((-0.0f - _ScanlineParams.y) - _ScanlineParams.y) * _19) + _ScanlineParams.y;
   float _2211 = ((((((_ColorR.x * _2149.x) - _2140) + (_ColorG.x * _2164.y)) + (_ColorB.x * _2179.z)) * _RGBSeparateParams1.z) + _2140) + _2210;
   float _2212 = ((((((_ColorR.y * _2149.x) - _2141) + (_ColorG.y * _2164.y)) + (_ColorB.y * _2179.z)) * _RGBSeparateParams1.z) + _2141) + _2210;

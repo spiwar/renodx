@@ -138,7 +138,7 @@ float4 main(
   // float4 _53 = _VR_SourceImage.Sample(s_linear_repeat_sampler, float2(_26, _47));
   float4 _53 = renodx::draw::InvertIntermediatePass(_VR_SourceImage.Sample(s_linear_repeat_sampler, float2(_26, _47)));
   float4 untonemapped = _53;
-  _53.xyz = renodx::tonemap::renodrt::NeutralSDR(_53.xyz);
+  _53.xyz = renodx::tonemap::dice::BT709(_53.xyz, 1.0f, 0.5f);
   float _73;
   float _74;
   float _553;
@@ -558,9 +558,9 @@ float4 main(
   float4 _2149 = _VR_SourceImage.Sample(s_linear_repeat_sampler, float2((_RGBSeparateParams0.x + _26), ((_RGBSeparateParams0.y * _29) + _47)));
   float4 _2164 = _VR_SourceImage.Sample(s_linear_repeat_sampler, float2((_RGBSeparateParams0.z + _26), ((_RGBSeparateParams0.w * _29) + _47)));
   float4 _2179 = _VR_SourceImage.Sample(s_linear_repeat_sampler, float2((_RGBSeparateParams1.x + _26), ((_RGBSeparateParams1.y * _29) + _47)));
-  _2149.xyz = renodx::tonemap::renodrt::NeutralSDR(renodx::draw::InvertIntermediatePass(_2149.xyz));
-  _2164.xyz = renodx::tonemap::renodrt::NeutralSDR(renodx::draw::InvertIntermediatePass(_2164.xyz));
-  _2179.xyz = renodx::tonemap::renodrt::NeutralSDR(renodx::draw::InvertIntermediatePass(_2179.xyz));
+  _2149.xyz = renodx::tonemap::dice::BT709(renodx::draw::InvertIntermediatePass(_2149.xyz), 1.0f, 0.5f);
+  _2164.xyz = renodx::tonemap::dice::BT709(renodx::draw::InvertIntermediatePass(_2164.xyz), 1.0f, 0.5f);
+  _2179.xyz = renodx::tonemap::dice::BT709(renodx::draw::InvertIntermediatePass(_2179.xyz), 1.0f, 0.5f);
   float _2210 = (((-0.0f - _ScanlineParams.y) - _ScanlineParams.y) * _21) + _ScanlineParams.y;
   float _2211 = ((((((_ColorR.x * _2149.x) - _2140) + (_ColorG.x * _2164.y)) + (_ColorB.x * _2179.z)) * _RGBSeparateParams1.z) + _2140) + _2210;
   float _2212 = ((((((_ColorR.y * _2149.x) - _2141) + (_ColorG.y * _2164.y)) + (_ColorB.y * _2179.z)) * _RGBSeparateParams1.z) + _2141) + _2210;

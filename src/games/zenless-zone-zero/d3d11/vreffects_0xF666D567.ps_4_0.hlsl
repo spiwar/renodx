@@ -61,7 +61,7 @@ void main(
   r3.x = r0.y ? r0.z : r0.w;
   _VR_SourceImage0 = renodx::draw::InvertIntermediatePass(_VR_SourceImage.Sample(s1_s, r1.xy).xyzw);
   float4 untonemapped = _VR_SourceImage0;
-  float3 untonemapped_neutral = renodx::tonemap::renodrt::NeutralSDR(_VR_SourceImage0.xyz);
+  float3 untonemapped_neutral = renodx::tonemap::dice::BT709(_VR_SourceImage0.xyz, 1.0f, 0.5f);
   _VR_SourceImage0.xyz = untonemapped_neutral;
   r0.yz = -cb0[139].zw + r1.xy;
   r5.xyzw = t0.SampleLevel(s0_s, r0.yz, 0).xyzw;
@@ -622,12 +622,12 @@ void main(
   }
   r2.x = 1;
   r3.xyzw = cb1[22].xyzw * r2.xyxy + r1.xyxy;
-  r5.xyz = renodx::tonemap::renodrt::NeutralSDR(renodx::draw::InvertIntermediatePass(_VR_SourceImage.Sample(s1_s, r3.xy).xyz));
-  r3.xyz = renodx::tonemap::renodrt::NeutralSDR(renodx::draw::InvertIntermediatePass(_VR_SourceImage.Sample(s1_s, r3.zw).xyz));
+  r5.xyz = renodx::tonemap::dice::BT709(renodx::draw::InvertIntermediatePass(_VR_SourceImage.Sample(s1_s, r3.xy).xyz), 1.0f, 0.5f);
+  r3.xyz = renodx::tonemap::dice::BT709(renodx::draw::InvertIntermediatePass(_VR_SourceImage.Sample(s1_s, r3.zw).xyz), 1.0f, 0.5f);
   r3.xyz = cb1[25].xyz * r3.yyy;
   r3.xyz = r5.xxx * cb1[24].xyz + r3.xyz;
   r1.zw = cb1[23].xy * r2.xy + r1.xy;
-  r2.xyz = renodx::tonemap::renodrt::NeutralSDR(renodx::draw::InvertIntermediatePass(_VR_SourceImage.Sample(s1_s, r1.zw).xyz));
+  r2.xyz = renodx::tonemap::dice::BT709(renodx::draw::InvertIntermediatePass(_VR_SourceImage.Sample(s1_s, r1.zw).xyz), 1.0f, 0.5f);
   r2.xyz = r2.zzz * cb1[26].xyz + r3.xyz;
   r2.xyz = r2.xyz + -r0.yzw;
   _VR_SourceImage0.xyz = cb1[23].zzz * r2.xyz + r0.yzw;
