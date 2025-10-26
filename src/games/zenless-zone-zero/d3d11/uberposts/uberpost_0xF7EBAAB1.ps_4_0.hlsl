@@ -1,7 +1,13 @@
-#include "../shared.h"
+#include "../../shared.h"
 
-// Used during the Afternoon on the Outer Ring.
-// ---- Created with 3Dmigoto v1.4.1 on Fri Jun  6 21:57:35 2025
+// used on ults (Piper) in Shiryu Defense
+// ---- Created with 3Dmigoto v1.4.1 on Mon Jan 20 01:06:01 2025
+Texture2D<float4> t9 : register(t9);
+
+Texture2D<float4> t8 : register(t8);
+
+Texture2D<float4> t7 : register(t7);
+
 Texture2D<float4> t6 : register(t6);
 
 Texture2D<float4> t5 : register(t5);
@@ -16,6 +22,10 @@ Texture2D<float4> t1 : register(t1);
 
 Texture2D<float4> t0 : register(t0);
 
+SamplerState s5_s : register(s5);
+
+SamplerState s4_s : register(s4);
+
 SamplerState s3_s : register(s3);
 
 SamplerState s2_s : register(s2);
@@ -29,7 +39,7 @@ cbuffer cb1 : register(b1) {
 }
 
 cbuffer cb0 : register(b0) {
-  float4 cb0[138];
+  float4 cb0[188];
 }
 
 // 3Dmigoto declarations
@@ -40,19 +50,19 @@ void main(
     float4 v1: TEXCOORD0,
     float4 v2: TEXCOORD1,
     out float4 o0: SV_Target0) {
-  float4 r0, r1, r2, r3, r4, r5, r6, r7;
+  float4 r0, r1, r2, r3, r4, r5, r6, r7, r8, r9;
   uint4 bitmask, uiDest;
   float4 fDest;
 
-  r0.xy = cb0[137].xy * v1.xy;
+  r0.xy = cb0[133].xy * v1.xy;
   r0.xy = (uint2)r0.xy;
   r0.zw = float2(0, 0);
   r0.xyzw = t0.Load(r0.xyz).xyzw;
   r0.yz = v1.xy * float2(2, 2) + float2(-1, -1);
-  r1.xyzw = cb0[134].xyzw * -r0.zzzz;
-  r1.xyzw = cb0[133].xyzw * r0.yyyy + r1.xyzw;
-  r1.xyzw = cb0[135].xyzw * r0.xxxx + r1.xyzw;
-  r1.xyzw = cb0[136].xyzw + r1.xyzw;
+  r1.xyzw = cb0[130].xyzw * -r0.zzzz;
+  r1.xyzw = cb0[129].xyzw * r0.yyyy + r1.xyzw;
+  r1.xyzw = cb0[131].xyzw * r0.xxxx + r1.xyzw;
+  r1.xyzw = cb0[132].xyzw + r1.xyzw;
   r1.xyzw = r1.yzxy / r1.wwww;
   r0.yzw = ddx(r1.yzw);
   r2.xyz = ddy(r1.wyz);
@@ -61,7 +71,7 @@ void main(
   r2.x = dot(r0.yzw, r0.yzw);
   r2.x = rsqrt(r2.x);
   r0.yzw = r2.xxx * r0.yzw;
-  r0.x = cb0[61].z * r0.x + cb0[61].w;
+  r0.x = cb0[57].z * r0.x + cb0[57].w;
   r0.x = 1 / r0.x;
   r0.x = saturate(r0.x * cb1[31].z + -cb1[31].y);
   r2.x = -cb1[33].y + r1.w;
@@ -194,11 +204,11 @@ void main(
   r0.x = r2.x * r0.x;
   r0.z = r0.y * r0.x;
   r0.xy = r0.yy * r0.xx + v1.xy;
-  r0.xy = cb0[137].xy * r0.xy;
+  r0.xy = cb0[133].xy * r0.xy;
   r1.xy = (uint2)r0.xy;
   r1.zw = float2(0, 0);
   r1.xyzw = t0.Load(r1.xyz).xyzw;
-  r0.x = cb0[61].z * r1.x + cb0[61].w;
+  r0.x = cb0[57].z * r1.x + cb0[57].w;
   r0.x = 1 / r0.x;
   r0.x = saturate(r0.x * cb1[31].z + -cb1[31].y);
   r0.xy = r0.zz * r0.xx + v1.xy;
@@ -216,55 +226,107 @@ void main(
     r2.xyzw = float4(0, 0, 0, 0);
     r0.zw = float2(0, 0);
   }
-  r1.zw = r0.xy * float2(2, 2) + float2(-1, -1);
-  r3.xy = float2(-0.5, -0.5) + cb1[24].xy;
-  r1.zw = -r3.xy + r1.zw;
-  r3.x = dot(r1.zw, r1.zw);
-  r1.zw = r3.xx * r1.zw;
-  r1.zw = cb1[12].zz * r1.zw;
-  r3.xy = float2(-0.333333343, -0.333333343) * r1.zw;
-  r3.z = 9.99999975e-05;
-  r1.z = dot(r3.xyz, r3.xyz);
-  r1.z = rsqrt(r1.z);
-  r1.zw = r3.xy * r1.zz;
-  r3.x = dot(r3.xy, r3.xy);
-  r3.x = sqrt(r3.x);
-  r3.y = 0.942809045 * cb1[12].z;
-  r3.x = r3.x / r3.y;
-  r3.x = log2(r3.x);
-  r3.x = cb1[24].z * r3.x;
-  r3.x = exp2(r3.x);
-  r1.zw = r3.xx * r1.zw;
-  r3.xz = r1.zw * r3.yy;
-  r2.xy = r2.xy + r0.xy;
-  r4.xyzw = t1.Sample(s0_s, r2.xy).xyzw;
-  r2.xy = r2.zw + r0.xy;
-  r1.zw = r1.zw * r3.yy + r2.xy;
+  r1.z = frac(cb0[14].x);
+  r3.xy = r0.xy * float2(5, 5) + r1.zz;
+  r3.xyzw = t5.Sample(s3_s, r3.xy).xyzw;
+  r1.w = -0.5 + r3.x;
+  r1.w = r1.w + r1.w;
+  r3.x = cmp(abs(r1.w) >= cb1[15].z);
+  r3.x = r3.x ? 1.000000 : 0;
+  r1.w = r3.x * r1.w;
+  r1.w = cb1[15].y * r1.w;
+  r1.w = 0.00999999978 * r1.w;
+  sincos(cb1[14].w, r3.x, r4.x);
+  r3.yzw = cb1[14].xyz * float3(0.100000001, 0.100000001, 0.100000001) + r1.www;
+  r4.y = r3.x;
+  r4.zw = r4.yy * r3.yz;
+  r1.w = r4.y * r3.w;
+  r5.xy = float2(88, 1234) * r1.zz;
+  r5.xy = frac(r5.xy);
+  r1.z = r5.x + r0.y;
+  r6.yw = r1.zz * cb1[15].xx + r4.zw;
+  r7.y = r1.z * cb1[15].x + r1.w;
+  r6.xz = float2(0.5, 0.5);
+  r8.xyzw = t5.Sample(s3_s, r6.xy).xyzw;
+  r6.xyzw = t5.Sample(s3_s, r6.zw).xyzw;
+  r7.xw = float2(0.5, 0);
+  r9.xyzw = t5.Sample(s3_s, r7.xy).yzxw;
+  r1.z = r5.y * r5.y;
+  r1.z = r5.y * r1.z;
+  r1.w = max(cb1[16].y, cb1[16].x);
+  r1.w = -cb1[16].x + r1.w;
+  r1.z = r1.z * r1.w + cb1[16].x;
+  r9.x = r8.x;
+  r9.y = r6.x;
+  r5.xyz = cmp(r1.zzz >= r9.xyz);
+  r5.xyz = r5.xyz ? float3(1, 1, 1) : 0;
+  r5.xyz = cb1[16].zzz * r5.xyz;
+  r1.zw = cmp(float2(0.5, 0.5) < cb1[19].zw);
+  if (r1.z != 0) {
+    r4.zw = r0.xy * cb1[17].xy + cb1[17].zw;
+    r6.xyzw = t6.Sample(s4_s, r4.zw).xyzw;
+    r5.xyz = r6.xxx * r5.xyz;
+  }
+  if (r1.w != 0) {
+    r1.zw = r0.xy * cb1[18].xy + cb1[18].zw;
+    r4.zw = cb1[19].xy * cb0[14].xx;
+    r4.zw = frac(r4.zw);
+    r1.zw = r4.zw + r1.zw;
+    r6.xyzw = t6.Sample(s4_s, r1.zw).xyzw;
+    r5.xyz = r6.yyy * r5.xyz;
+  }
+  r1.zw = r2.xy + r0.xy;
+  r1.zw = r3.yy * r4.xy + r1.zw;
+  r6.xyzw = t1.Sample(s0_s, r1.zw).xyzw;
+  r1.zw = r2.zw + r0.xy;
+  r1.zw = r3.zz * r4.xy + r1.zw;
   r2.xyzw = t1.Sample(s0_s, r1.zw).xyzw;
   r0.zw = r0.xy + r0.zw;
-  r0.zw = r3.xz * float2(2, 2) + r0.zw;
+  r0.zw = r3.ww * r4.xy + r0.zw;
   r3.xyzw = t1.Sample(s0_s, r0.zw).xyzw;
-  r5.xyzw = t1.Sample(s0_s, r1.xy).xyzw;
+  r4.xyzw = t1.Sample(s0_s, r1.xy).xyzw;
+  r0.zw = cb1[23].xy * r0.xy;
+  r0.zw = cb0[187].xy * r0.zw;
+  r8.xyzw = t9.Sample(s1_s, r0.zw).xyzw;
+  r2.xzw = float3(12, 12, 12) * r8.xyz;
+  r0.z = 25 * cb0[14].x;
+  r0.z = frac(r0.z);
+  r0.w = 1 + -r0.y;
+  r0.z = r0.z + -r0.w;
+  r0.w = 0.400000006 + -r0.z;
+  r0.z = saturate(0.0500000007 + r0.z);
+  r1.z = cmp(r0.w >= 0.400000006);
+  r1.z = r1.z ? 1.000000 : 0;
+  r0.z = r0.z * 10 + -r0.w;
+  r0.z = r1.z * r0.z + r0.w;
+  r0.z = max(0, r0.z);
+  r0.z = r0.z * cb1[23].w + 1;
+  r2.xzw = r2.xzw * r0.zzz;
+  r0.z = 1 + -cb1[23].z;
+  r2.xzw = r2.xzw * r0.zzz + cb1[23].zzz;
+  r3.x = r6.x;
+  r3.y = r2.y;
+  r2.xyz = r3.xyz * r2.xzw + r5.xyz;
   r0.z = cmp(cb1[21].z < 0.5);
   r1.zw = cmp(float2(0, 0) < cb1[21].xy);
   r0.w = (int)r1.w | (int)r1.z;
   r0.z = r0.z ? r0.w : 0;
   if (r0.z != 0) {
-    r0.z = cb0[137].y * r1.y;
+    r0.z = cb0[133].y * r1.y;
     r0.z = cb1[25].x * r0.z;
     r0.w = r0.z + r0.z;
     r0.w = cmp(r0.w >= -r0.w);
-    r2.xz = r0.ww ? float2(2, 0.5) : float2(-2, -0.5);
-    r0.z = r2.z * r0.z;
+    r3.xy = r0.ww ? float2(2, 0.5) : float2(-2, -0.5);
+    r0.z = r3.y * r0.z;
     r0.z = frac(r0.z);
-    r0.w = r2.x * r0.z;
+    r0.w = r3.x * r0.z;
     r1.z = cmp(1 < r0.w);
-    r0.z = -r2.x * r0.z + 2;
+    r0.z = -r3.x * r0.z + 2;
     r0.z = r1.z ? r0.z : r0.w;
     r0.z = r0.z * 2 + -1;
-    r5.x = cb1[25].z * r0.z + r1.x;
-    r0.z = cb0[137].x * cb0[137].w;
-    r0.w = abs(cb1[26].y) + r5.x;
+    r3.x = cb1[25].z * r0.z + r1.x;
+    r0.z = cb0[133].x * cb0[133].w;
+    r0.w = abs(cb1[26].y) + r3.x;
     r1.z = cb1[26].y * r1.y;
     r0.w = r0.w * r0.z + -r1.z;
     r0.z = dot(cb1[26].xx, r0.zz);
@@ -272,38 +334,34 @@ void main(
     r0.z = frac(r0.z);
     r0.z = cmp(0.5 >= r0.z);
     r0.z = r0.z ? 0.999989986 : -1;
-    r5.y = cb1[26].z * r0.z + r1.y;
-    r6.xyzw = t5.Sample(s3_s, r5.xy).xyzw;
-    r2.xzw = log2(abs(r6.xyz));
-    r2.xzw = float3(0.333333343, 0.333333343, 0.333333343) * r2.xzw;
-    r2.xzw = exp2(r2.xzw);
-    r2.xzw = r2.xzw * float3(1.49380159, 1.49380159, 1.49380159) + -r6.xyz;
-    r4.yzw = cmp(r6.xyz >= float3(0.300000012, 0.300000012, 0.300000012));
-    r4.yzw = r4.yzw ? float3(1, 1, 1) : 0;
-    r2.xzw = float3(-0.699999988, -0.699999988, -0.699999988) + r2.xzw;
-    r2.xzw = r4.yzw * r2.xzw + r6.xyz;
-    r2.xzw = cb1[21].xxx * r2.xzw;
-    r3.x = r4.x;
-    r3.y = r2.y;
-    r0.z = dot(r3.xyz, float3(0.298999995, 0.587000012, 0.114));
+    r3.y = cb1[26].z * r0.z + r1.y;
+    r3.xyzw = t7.Sample(s5_s, r3.xy).xyzw;
+    r4.xyz = log2(abs(r3.xyz));
+    r4.xyz = float3(0.333333343, 0.333333343, 0.333333343) * r4.xyz;
+    r4.xyz = exp2(r4.xyz);
+    r4.xyz = r4.xyz * float3(1.49380159, 1.49380159, 1.49380159) + -r3.xyz;
+    r5.xyz = cmp(r3.xyz >= float3(0.300000012, 0.300000012, 0.300000012));
+    r5.xyz = r5.xyz ? float3(1, 1, 1) : 0;
+    r4.xyz = float3(-0.699999988, -0.699999988, -0.699999988) + r4.xyz;
+    r3.xyz = r5.xyz * r4.xyz + r3.xyz;
+    r3.xyz = cb1[21].xxx * r3.xyz;
+    r0.z = dot(r2.xyz, float3(0.298999995, 0.587000012, 0.114));
     r0.w = cmp(0.5 < cb1[22].x);
-    r4.yzw = r0.zzz * r2.xzw + -r2.xzw;
-    r4.yzw = r5.www * r4.yzw + r2.xzw;
-    r4.yzw = r0.www ? r4.yzw : r2.xzw;
+    r4.xyz = r0.zzz * r3.xyz + -r3.xyz;
+    r4.xyz = r4.www * r4.xyz + r3.xyz;
+    r4.xyz = r0.www ? r4.xyz : r3.xyz;
     if (r1.w != 0) {
       r0.zw = r1.xy * cb1[20].xy + cb1[20].zw;
-      r6.xyzw = t6.Sample(s0_s, r0.zw).xyzw;
-      r5.xyz = cb1[21].yyy * r6.xyz;
-      r4.yzw = r5.xyz * r2.xzw + r4.yzw;
+      r5.xyzw = t8.Sample(s0_s, r0.zw).xyzw;
+      r5.xyz = cb1[21].yyy * r5.xyz;
+      r4.xyz = r5.xyz * r3.xyz + r4.xyz;
     }
-    r3.xyz = r4.yzw + r3.xyz;
-    r0.z = r4.y + r4.z;
-    r0.z = r0.z + r4.w;
-    o0.w = saturate(r0.z * 0.333299994 + r5.w);
+    r2.xyz = r4.xyz + r2.xyz;
+    r0.z = r4.x + r4.y;
+    r0.z = r0.z + r4.z;
+    o0.w = saturate(r0.z * 0.333299994 + r4.w);
   } else {
-    r3.x = r4.x;
-    r3.y = r2.y;
-    o0.w = r5.w;
+    o0.w = r4.w;
   }
   r0.z = cmp(0 < cb1[7].z);
   if (r0.z != 0) {
@@ -318,13 +376,13 @@ void main(
     r0.z = exp2(r0.z);
     r1.xyz = float3(1, 1, 1) + -cb1[6].xyz;
     r1.xyz = r0.zzz * r1.xyz + cb1[6].xyz;
-    r3.xyz = r3.xyz * r1.xyz;
+    r2.xyz = r2.xyz * r1.xyz;
   }
-  float3 untonemapped = (r3.xyz);
+  float3 untonemapped = (r2.xyz);
 
   /*
   // Sample as 2D - ARRI C3 1000 LUT (internal)
-  r1.xyz = r3.zxy * float3(5.55555582, 5.55555582, 5.55555582) + float3(0.0479959995, 0.0479959995, 0.0479959995);
+  r1.xyz = r2.zxy * float3(5.55555582, 5.55555582, 5.55555582) + float3(0.0479959995, 0.0479959995, 0.0479959995);
   r1.xyz = log2(r1.xyz);
   r1.xyz = saturate(r1.xyz * float3(0.0734997839, 0.0734997839, 0.0734997839) + float3(0.386036009, 0.386036009, 0.386036009));
   r1.yzw = cb1[0].zzz * r1.xyz;
@@ -333,9 +391,8 @@ void main(
   r2.yz = r1.zw * cb1[0].xy + r2.xy;
   r2.x = r0.z * cb1[0].y + r2.y;
   r3.xyzw = t3.SampleLevel(s0_s, r2.xz, 0).xyzw;
-  r4.x = cb1[0].y;
-  r4.y = 0;
-  r1.yz = r4.xy + r2.xz;
+  r7.z = cb1[0].y;
+  r1.yz = r2.xz + r7.zw;
   r2.xyzw = t3.SampleLevel(s0_s, r1.yz, 0).xyzw;
   r0.z = r1.x * cb1[0].z + -r0.z;
   r1.xyz = r2.xyz + -r3.xyz;

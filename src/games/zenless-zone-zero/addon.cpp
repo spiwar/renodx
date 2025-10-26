@@ -27,6 +27,10 @@ ShaderInjectData shader_injection;
 const std::string build_date = __DATE__;
 const std::string build_time = __TIME__;
 
+// Forward declarations for preset functions
+void OnPresetOff();
+void OnPresetHdrLook();
+
 renodx::utils::settings::Settings settings = {
     new renodx::utils::settings::Setting{
         .key = "toneMapType",
@@ -217,6 +221,18 @@ renodx::utils::settings::Settings settings = {
         .parse = [](float value) { return value * 0.01f; },
     },
     new renodx::utils::settings::Setting{
+        .key = "fxBloomIntensity",
+        .binding = &shader_injection.fxBloomIntensity,
+        .default_value = 10.f,
+        .label = "Bloom Intensity",
+        .section = "Effects",
+        .tooltip = "Adjusts bloom intensity by clamping bloom shader output."
+                   "\n0% = Clamped"
+                   "\n100% = Unclamped",
+        .max = 100.f,
+        .parse = [](float value) { return value * 0.01f; },
+    },
+    new renodx::utils::settings::Setting{
         .key = "swapchainCustomColorSpace",
         .binding = &shader_injection.swapchainCustomColorSpace,
         .value_type = renodx::utils::settings::SettingValueType::INTEGER,
@@ -247,6 +263,12 @@ renodx::utils::settings::Settings settings = {
         .labels = {"None", "BT709", "BT2020", "AP1"},
         .is_enabled = []() { return shader_injection.toneMapType >= 1; },
         .parse = [](float value) { return value - 1.f; },
+    },
+    new renodx::utils::settings::Setting{
+        .value_type = renodx::utils::settings::SettingValueType::BUTTON,
+        .label = "HDR Look",
+        .section = "Presets",
+        .on_change = OnPresetHdrLook,
     },
     new renodx::utils::settings::Setting{
         .value_type = renodx::utils::settings::SettingValueType::TEXT,
@@ -302,6 +324,17 @@ void OnPresetOff() {
   renodx::utils::settings::UpdateSetting("colorGradeHighlightSaturation", 50.f);
   renodx::utils::settings::UpdateSetting("colorGradeLUTStrength", 100.f);
   renodx::utils::settings::UpdateSetting("colorGradeLUTScaling", 0.f);
+}
+
+void OnPresetHdrLook() {
+  renodx::utils::settings::UpdateSetting("toneMapGammaCorrection", 2.2f);
+  renodx::utils::settings::UpdateSetting("toneMapHueProcessor", 0.f);
+  renodx::utils::settings::UpdateSetting("toneMapHueCorrection", 50.f);
+  renodx::utils::settings::UpdateSetting("toneMapHueShift", 50.f);
+  renodx::utils::settings::UpdateSetting("colorGradeHighlights", 65.f);
+  renodx::utils::settings::UpdateSetting("colorGradeContrast", 65.f);
+  renodx::utils::settings::UpdateSetting("colorGradeSaturation", 65.f);
+  renodx::utils::settings::UpdateSetting("colorGradeBlowout", 65.f);
 }
 
 void OnInitDevice(reshade::api::device* device) {
@@ -384,6 +417,7 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
           1728.f / 624.f,  // 32:9
           1.f / 1.f,       // Character portrait
           2160.f / 1272.f, // Mission finish logo
+          1296.f / 816.f,  // Character portrait in Shiyu
       };
 
       for (const float& ratio : additional_aspect_ratios) {

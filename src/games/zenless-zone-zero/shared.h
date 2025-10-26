@@ -26,6 +26,8 @@ struct ShaderInjectData {
   float colorGradeLUTStrength;
   float colorGradeLUTScaling;
 
+  float fxBloomIntensity;
+
   float swapchainCustomColorSpace;
   float swapchainClampColorSpace;
   float swapchainEncoding;
