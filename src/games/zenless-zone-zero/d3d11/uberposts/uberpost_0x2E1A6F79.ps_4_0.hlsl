@@ -1,4 +1,4 @@
-#include "../shared.h"
+#include "../../shared.h"
 
 // lacks a lut for some reason? used on the main menu.
 // ---- Created with 3Dmigoto v1.4.1 on Fri Jun  6 06:47:32 2025
@@ -181,6 +181,6 @@ void main(
     r2.xyz = r0.xzw * r0.yyy + r2.xyz;
   }
   // o0.xyz = saturate(r2.xyz);
-  o0.rgb = renodx::draw::RenderIntermediatePass(r2.xyz);
+  o0.xyz = renodx::draw::RenderIntermediatePass(r2.xyz);
   return;
 }

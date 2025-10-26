@@ -355,6 +355,7 @@ float4 main(
     _444 = _402;
     _445 = _403;
   }
+  
   float3 untonemapped = (float3(_443, _444, _445));
   renodx::lut::Config lut_config = renodx::lut::config::Create(
       s_linear_clamp_sampler,

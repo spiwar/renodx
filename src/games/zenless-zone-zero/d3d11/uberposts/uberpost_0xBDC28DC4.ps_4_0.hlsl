@@ -1,7 +1,8 @@
-#include "../tonemap.hlsl"
+// ---- Created with 3Dmigoto v1.3.16 on Sun Oct 26 04:00:14 2025
 
-// Used on the Wipeout screen
-// ---- Created with 3Dmigoto v1.4.1 on Sat Jun  7 00:17:29 2025
+#include "../../tonemap.hlsl"
+
+// Trigger charged shot - VR
 Texture2D<float4> t8 : register(t8);
 
 Texture2D<float4> t7 : register(t7);
@@ -37,7 +38,7 @@ cbuffer cb1 : register(b1) {
 }
 
 cbuffer cb0 : register(b0) {
-  float4 cb0[193];
+  float4 cb0[197];
 }
 
 // 3Dmigoto declarations
@@ -121,7 +122,7 @@ void main(
   r3.xy = r3.xy * r1.xx;
   r3.xy = cb1[12].zz * r3.xy;
   r6.xy = float2(-0.333333343, -0.333333343) * r3.xy;
-  r6.z = 9.99999975e-05;
+  r6.z = 9.99999975e-005;
   r1.x = dot(r6.xyz, r6.xyz);
   r1.x = rsqrt(r1.x);
   r3.xy = r6.xy * r1.xx;
@@ -137,9 +138,6 @@ void main(
   r2.xy = v1.xy + r2.xy;
   r1.xy = r1.yy * r4.xy + r2.xy;
   r7.xyzw = t0.Sample(s0_s, r1.xy).xyzw;
-
-  //float3 untonemapped = r7.rgb;
-
   r1.xy = v1.xy + r2.zw;
   r1.xy = r1.zz * r4.xy + r1.xy;
   r1.xy = r3.xy * r4.zz + r1.xy;
@@ -150,7 +148,7 @@ void main(
   r1.xyzw = t0.Sample(s0_s, r0.zw).xyzw;
   r4.xyzw = t0.Sample(s0_s, r0.xy).xyzw;
   r0.zw = cb1[23].xy * v1.xy;
-  r0.zw = cb0[192].xy * r0.zw;
+  r0.zw = cb0[196].xy * r0.zw;
   r6.xyzw = t8.Sample(s1_s, r0.zw).xyzw;
   r2.xzw = float3(12, 12, 12) * r6.xyz;
   r0.z = 25 * cb0[14].x;
@@ -227,8 +225,6 @@ void main(
   } else {
     o0.w = r4.w;
   }
-
-  // possibly vignette
   r0.z = cmp(0 < cb1[7].z);
   if (r0.z != 0) {
     r0.xy = -cb1[7].xy + r0.xy;
@@ -244,21 +240,21 @@ void main(
     r0.xyz = r0.xxx * r0.yzw + cb1[6].xyz;
     r1.xyz = r1.xyz * r0.zxy;
   }
-  float3 untonemapped = (r1.gbr);
+  float3 untonemapped = (r1.xyz);
 
   r0.xyz = applyUserToneMap(untonemapped, cb1[0], t2, s0_s);
-  /* Original LUT Sampling
+  /*
   r1.xyz = saturate(r1.xyz);
-  r0.xyz = float3(12.9200001, 12.9200001, 12.9200001) * r1.xyz;
+  r0.xyz = float3(12.9200001,12.9200001,12.9200001) * r1.xyz;
   r2.xyz = log2(r1.xyz);
-  r2.xyz = float3(0.416666657, 0.416666657, 0.416666657) * r2.xyz;
+  r2.xyz = float3(0.416666657,0.416666657,0.416666657) * r2.xyz;
   r2.xyz = exp2(r2.xyz);
-  r2.xyz = r2.xyz * float3(1.05499995, 1.05499995, 1.05499995) + float3(-0.0549999997, -0.0549999997, -0.0549999997);
-  r1.xyz = cmp(float3(0.00313080009, 0.00313080009, 0.00313080009) >= r1.xyz);
+  r2.xyz = r2.xyz * float3(1.05499995,1.05499995,1.05499995) + float3(-0.0549999997,-0.0549999997,-0.0549999997);
+  r1.xyz = cmp(float3(0.00313080009,0.00313080009,0.00313080009) >= r1.xyz);
   r0.xyz = r1.xyz ? r0.xyz : r2.xyz;
   r0.yzw = cb1[0].zzz * r0.xyz;
   r0.y = floor(r0.y);
-  r1.xy = float2(0.5, 0.5) * cb1[0].xy;
+  r1.xy = float2(0.5,0.5) * cb1[0].xy;
   r1.yz = r0.zw * cb1[0].xy + r1.xy;
   r1.x = r0.y * cb1[0].y + r1.y;
   r2.xyzw = t2.SampleLevel(s0_s, r1.xz, 0).xyzw;
@@ -268,15 +264,15 @@ void main(
   r0.x = r0.x * cb1[0].z + -r0.y;
   r0.yzw = r1.xyz + -r2.xyz;
   r0.xyz = r0.xxx * r0.yzw + r2.xyz;
-  r1.xyz = float3(0.0773993805, 0.0773993805, 0.0773993805) * r0.xyz;
-  r2.xyz = float3(0.0549999997, 0.0549999997, 0.0549999997) + r0.xyz;
-  r2.xyz = float3(0.947867334, 0.947867334, 0.947867334) * r2.xyz;
+  r1.xyz = float3(0.0773993805,0.0773993805,0.0773993805) * r0.xyz;
+  r2.xyz = float3(0.0549999997,0.0549999997,0.0549999997) + r0.xyz;
+  r2.xyz = float3(0.947867334,0.947867334,0.947867334) * r2.xyz;
   r2.xyz = log2(abs(r2.xyz));
-  r2.xyz = float3(2.4000001, 2.4000001, 2.4000001) * r2.xyz;
+  r2.xyz = float3(2.4000001,2.4000001,2.4000001) * r2.xyz;
   r2.xyz = exp2(r2.xyz);
-  r0.xyz = cmp(float3(0.0404499993, 0.0404499993, 0.0404499993) >= r0.xyz);
-  r0.xyz = r0.xyz ? r1.xyz : r2.xyz;*/
-
+  r0.xyz = cmp(float3(0.0404499993,0.0404499993,0.0404499993) >= r0.xyz);
+  r0.xyz = r0.xyz ? r1.xyz : r2.xyz;
+  */
   r0.w = cmp(0 < cb1[13].x);
   if (r0.w != 0) {
     r1.xy = v1.xy * cb1[8].xy + cb1[8].zw;
