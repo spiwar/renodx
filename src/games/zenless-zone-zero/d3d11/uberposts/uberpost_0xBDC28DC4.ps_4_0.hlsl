@@ -240,7 +240,8 @@ void main(
     r0.xyz = r0.xxx * r0.yzw + cb1[6].xyz;
     r1.xyz = r1.xyz * r0.zxy;
   }
-  float3 untonemapped = (r1.xyz);
+
+  float3 untonemapped = r1.yzx;
 
   r0.xyz = applyUserToneMap(untonemapped, cb1[0], t2, s0_s);
   /*

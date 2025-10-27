@@ -141,10 +141,10 @@ void main(
     r0.xyz = r0.xxx * r0.yzw + cb1[6].xyz;
     r3.xyz = r3.xyz * r0.zxy;
   }
-  float3 untonemapped = (r3.xyz);
-
+  float3 untonemapped = r3.yzx;
   r0.xyz = applyUserToneMap(untonemapped, cb1[0], t2, s0_s);
 
+  // Internal LUT
   /*
   r3.xyz = saturate(r3.xyz);
   r0.xyz = float3(12.9200001,12.9200001,12.9200001) * r3.xyz;

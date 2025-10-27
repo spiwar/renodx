@@ -2,7 +2,7 @@
 
 #include "../../tonemap.hlsl"
 
-// Trigger aftershock - shi yu
+// Trigger aftershock - shiyu
 Texture2D<float4> t6 : register(t6);
 
 Texture2D<float4> t5 : register(t5);
@@ -498,7 +498,7 @@ void main(
       renodx::lut::config::type::ARRI_C1000_NO_CUT,
       renodx::lut::config::type::LINEAR);
 
-  r1.xyz = renodx::lut::Sample(t2, lut_config, untonemapped);
+  r1.xyz = renodx::lut::Sample(t3, lut_config, untonemapped);
   /*
   r1.xyz = r3.zxy * float3(5.55555582,5.55555582,5.55555582) + float3(0.0479959995,0.0479959995,0.0479959995);
   r1.xyz = log2(r1.xyz);

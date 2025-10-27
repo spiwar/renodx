@@ -453,7 +453,7 @@ void main(
       renodx::lut::config::type::ARRI_C1000_NO_CUT,
       renodx::lut::config::type::LINEAR);
 
-  r3.xyz = renodx::lut::Sample(t2, lut_config, untonemapped);
+  r3.xyz = renodx::lut::Sample(t3, lut_config, untonemapped);
   /*
   r5.xyz = r5.zxy * float3(5.55555582,5.55555582,5.55555582) + float3(0.0479959995,0.0479959995,0.0479959995);
   r5.xyz = log2(r5.xyz);
