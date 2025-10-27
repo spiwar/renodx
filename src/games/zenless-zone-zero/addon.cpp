@@ -415,7 +415,8 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
           1584.f / 624.f,  // 19.5:9
           1704.f / 624.f,  // 21:9
           1728.f / 624.f,  // 32:9
-          1.f / 1.f,       // Character portrait
+          1.f / 1.f,  // Character portrait 
+          960.f / 624.f,  // Character portrait with 0.8 scale
           2160.f / 1272.f, // Mission finish logo
           1296.f / 816.f,  // Character portrait in Shiyu
       };
