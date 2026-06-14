@@ -37,10 +37,14 @@ build.ninja/**
 build32.ninja/**
 build.vs/**
 build32.vs/**
+/.vs/
+/*.code-workspace
 
 bin/**
 **/.vshistory/
 .cache/**
 .env
 .vscode/mcp.json
+.vscode/tasks.json
+/scripts/endfield-project.ps1
 .kiro/
