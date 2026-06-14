@@ -127,7 +127,9 @@ struct SwapchainProxyPass {
     if (swapchain_clone_override != nullptr && swapchain_clone_override->handle != 0u) {
       swapchain_clone = *swapchain_clone_override;
     } else if (use_compatibility_mode) {
-      swapchain_clone = renodx::utils::resource::upgrade::GetResourceClone(current_back_buffer);
+      renodx::utils::resource::upgrade::ResourceCloneOptions clone_options = {};
+      clone_options.require_enabled = false;
+      swapchain_clone = renodx::utils::resource::upgrade::GetResourceClone(current_back_buffer, clone_options);
       if (swapchain_clone.handle == 0u) {
         std::stringstream s;
         s << "utils::draw::SwapchainProxyPass::Render(failed: no clone after CloneResource";
